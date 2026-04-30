@@ -7,6 +7,7 @@ export interface CampaignSummary {
   is_active: boolean;
   member_count: number;
   my_character_id: string | null;
+  needs_attention: boolean;
   created_at: string;
 }
 
@@ -20,6 +21,7 @@ export interface CampaignMember {
   username: string;
   character_id: string | null;
   character_name: string | null;
+  needs_attention: boolean;
   joined_at: string;
 }
 

@@ -148,7 +148,21 @@ function CampaignCard({
     >
       <div className="row-between" style={{ marginBottom: 8 }}>
         <h3 className="card-title">{campaign.name}</h3>
-        <span className="badge">Ур. до {campaign.max_level}</span>
+        <div className="row" style={{ gap: 6 }}>
+          {campaign.needs_attention && (
+            <span
+              className="badge"
+              title={
+                role === "master"
+                  ? "Есть участники с несоответствующими персонажами"
+                  : "Ваш персонаж не соответствует ограничениям"
+              }
+            >
+              Требует доработки
+            </span>
+          )}
+          <span className="badge">Ур. до {campaign.max_level}</span>
+        </div>
       </div>
       <p className="muted" style={{ fontSize: 13.5, marginBottom: 12 }}>
         {role === "master"

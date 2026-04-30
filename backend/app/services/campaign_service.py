@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.campaign import Campaign, CampaignMember
 from app.models.character import Character
+from app.models.reference import CharacterClass, Race
 from app.models.user import User, UserRole
 from app.schemas.campaign import CampaignCreate, CampaignUpdate
 
@@ -33,13 +34,30 @@ def _generate_invite_code(length: int = 8) -> str:
     return "".join(secrets.choice(INVITE_ALPHABET) for _ in range(length))
 
 
+def _character_mismatches_campaign(
+    character: Character | None, campaign: Campaign
+) -> bool:
+    """True if the attached character no longer fits the (possibly updated) campaign rules."""
+    if character is None:
+        return False
+    if character.is_archived:
+        return True
+    if character.level > campaign.max_level:
+        return True
+    if campaign.allowed_races and character.race_code not in campaign.allowed_races:
+        return True
+    if campaign.allowed_classes and character.class_code not in campaign.allowed_classes:
+        return True
+    return False
+
+
 async def _allocate_invite_code(db: AsyncSession) -> str:
     for _ in range(10):
         code = _generate_invite_code()
         existing = await db.execute(select(Campaign).where(Campaign.invite_code == code))
         if existing.scalar_one_or_none() is None:
             return code
-    raise CampaignError("Failed to allocate unique invite code")
+    raise CampaignError("Не удалось сгенерировать уникальный код приглашения")
 
 
 # ---------- Create / Update / Delete ----------
@@ -48,7 +66,7 @@ async def create_campaign(
     db: AsyncSession, master: User, payload: CampaignCreate
 ) -> Campaign:
     if master.role != UserRole.MASTER:
-        raise CampaignPermissionError("Only masters can create campaigns")
+        raise CampaignPermissionError("Создавать кампании может только мастер")
 
     code = await _allocate_invite_code(db)
     campaign = Campaign(
@@ -112,7 +130,6 @@ async def regenerate_invite(db: AsyncSession, user: User, campaign_id: uuid.UUID
 
 async def list_for_user(db: AsyncSession, user: User) -> dict[str, list]:
     """Return owned + joined campaigns as lightweight summaries."""
-    # Owned
     owned_q = await db.execute(
         select(Campaign, User.username)
         .join(User, User.id == Campaign.master_id)
@@ -121,24 +138,58 @@ async def list_for_user(db: AsyncSession, user: User) -> dict[str, list]:
     )
     owned_rows = owned_q.all()
 
-    # Joined: campaigns where user is a member
     joined_q = await db.execute(
-        select(Campaign, User.username, CampaignMember.character_id)
+        select(Campaign, User.username, CampaignMember.character_id, Character)
         .join(User, User.id == Campaign.master_id)
         .join(CampaignMember, CampaignMember.campaign_id == Campaign.id)
+        .outerjoin(Character, Character.id == CampaignMember.character_id)
         .where(CampaignMember.user_id == user.id)
         .order_by(Campaign.created_at.desc())
     )
     joined_rows = joined_q.all()
 
-    # Member counts (one query)
     counts_q = await db.execute(
         select(CampaignMember.campaign_id, func.count(CampaignMember.user_id))
         .group_by(CampaignMember.campaign_id)
     )
     counts = {row[0]: row[1] for row in counts_q.all()}
 
-    def to_summary(c: Campaign, master_username: str, my_char_id=None) -> dict:
+    # For owned campaigns: needs_attention = at least one member's character mismatches.
+    owned_ids = [c.id for c, _ in owned_rows]
+    owned_attention: dict[uuid.UUID, bool] = {cid: False for cid in owned_ids}
+    if owned_ids:
+        member_chars_q = await db.execute(
+            select(CampaignMember.campaign_id, Character)
+            .outerjoin(Character, Character.id == CampaignMember.character_id)
+            .where(CampaignMember.campaign_id.in_(owned_ids))
+        )
+        owned_by_id = {c.id: c for c, _ in owned_rows}
+        for cid, character in member_chars_q.all():
+            if owned_attention[cid]:
+                continue
+            if _character_mismatches_campaign(character, owned_by_id[cid]):
+                owned_attention[cid] = True
+
+    def to_owned(c: Campaign, master_username: str) -> dict:
+        return {
+            "id": c.id,
+            "master_id": c.master_id,
+            "master_username": master_username,
+            "name": c.name,
+            "max_level": c.max_level,
+            "is_active": c.is_active,
+            "member_count": counts.get(c.id, 0),
+            "my_character_id": None,
+            "needs_attention": owned_attention.get(c.id, False),
+            "created_at": c.created_at,
+        }
+
+    def to_joined(
+        c: Campaign,
+        master_username: str,
+        my_char_id,
+        my_character: Character | None,
+    ) -> dict:
         return {
             "id": c.id,
             "master_id": c.master_id,
@@ -148,12 +199,13 @@ async def list_for_user(db: AsyncSession, user: User) -> dict[str, list]:
             "is_active": c.is_active,
             "member_count": counts.get(c.id, 0),
             "my_character_id": my_char_id,
+            "needs_attention": _character_mismatches_campaign(my_character, c),
             "created_at": c.created_at,
         }
 
     return {
-        "owned": [to_summary(c, u) for (c, u) in owned_rows],
-        "joined": [to_summary(c, u, ch) for (c, u, ch) in joined_rows],
+        "owned": [to_owned(c, u) for (c, u) in owned_rows],
+        "joined": [to_joined(c, u, ch_id, ch) for (c, u, ch_id, ch) in joined_rows],
     }
 
 
@@ -182,28 +234,24 @@ async def get_detail(
     master_username = master_q.scalar_one()
 
     members_q = await db.execute(
-        select(
-            CampaignMember.user_id,
-            User.username,
-            CampaignMember.character_id,
-            Character.name,
-            CampaignMember.joined_at,
-        )
+        select(CampaignMember, User.username, Character)
         .join(User, User.id == CampaignMember.user_id)
         .outerjoin(Character, Character.id == CampaignMember.character_id)
         .where(CampaignMember.campaign_id == campaign_id)
         .order_by(CampaignMember.joined_at.asc())
     )
-    members = [
-        {
-            "user_id": row[0],
-            "username": row[1],
-            "character_id": row[2],
-            "character_name": row[3],
-            "joined_at": row[4],
-        }
-        for row in members_q.all()
-    ]
+    members = []
+    for member, username, character in members_q.all():
+        members.append(
+            {
+                "user_id": member.user_id,
+                "username": username,
+                "character_id": member.character_id,
+                "character_name": character.name if character is not None else None,
+                "needs_attention": _character_mismatches_campaign(character, campaign),
+                "joined_at": member.joined_at,
+            }
+        )
 
     return {
         "id": campaign.id,
@@ -230,11 +278,11 @@ async def join_by_code(
     q = await db.execute(select(Campaign).where(Campaign.invite_code == invite_code))
     campaign = q.scalar_one_or_none()
     if campaign is None:
-        raise CampaignNotFound("Invalid invite code")
+        raise CampaignNotFound("Неверный код приглашения")
     if campaign.master_id == user.id:
-        raise CampaignValidationError("Master cannot join their own campaign as a player")
+        raise CampaignValidationError("Мастер не может вступить в свою кампанию как игрок")
     if not campaign.is_active:
-        raise CampaignValidationError("Campaign is not active")
+        raise CampaignValidationError("Кампания не активна")
 
     existing = await db.execute(
         select(CampaignMember).where(
@@ -243,7 +291,7 @@ async def join_by_code(
         )
     )
     if existing.scalar_one_or_none() is not None:
-        raise CampaignValidationError("Already a member of this campaign")
+        raise CampaignValidationError("Вы уже состоите в этой кампании")
 
     if character_id is not None:
         await _validate_character_for_campaign(db, user, character_id, campaign)
@@ -265,7 +313,7 @@ async def leave(db: AsyncSession, user: User, campaign_id: uuid.UUID) -> None:
     )
     member = q.scalar_one_or_none()
     if member is None:
-        raise CampaignNotFound("You are not a member of this campaign")
+        raise CampaignNotFound("Вы не состоите в этой кампании")
     await db.delete(member)
     await db.commit()
 
@@ -287,7 +335,7 @@ async def kick(
     )
     member = q.scalar_one_or_none()
     if member is None:
-        raise CampaignNotFound("Member not found")
+        raise CampaignNotFound("Участник не найден")
     await db.delete(member)
     await db.commit()
 
@@ -306,7 +354,7 @@ async def attach_character(
     )
     member = q.scalar_one_or_none()
     if member is None:
-        raise CampaignNotFound("You are not a member of this campaign")
+        raise CampaignNotFound("Вы не состоите в этой кампании")
 
     if character_id is not None:
         campaign = await db.get(Campaign, campaign_id)
@@ -321,18 +369,22 @@ async def _validate_character_for_campaign(
 ) -> None:
     char = await db.get(Character, character_id)
     if char is None or char.user_id != user.id:
-        raise CampaignValidationError("Character not found")
+        raise CampaignValidationError("Персонаж не найден")
     if char.is_archived:
-        raise CampaignValidationError("Character is archived")
+        raise CampaignValidationError("Персонаж в архиве")
     if char.level > campaign.max_level:
         raise CampaignValidationError(
-            f"Character level {char.level} exceeds campaign limit {campaign.max_level}"
+            f"Уровень персонажа ({char.level}) превышает лимит кампании ({campaign.max_level})"
         )
     if campaign.allowed_races and char.race_code not in campaign.allowed_races:
+        race = await db.get(Race, char.race_code)
+        race_name = race.name_ru if race else char.race_code
         raise CampaignValidationError(
-            f"Race '{char.race_code}' is not allowed in this campaign"
+            f"Раса «{race_name}» не разрешена в этой кампании"
         )
     if campaign.allowed_classes and char.class_code not in campaign.allowed_classes:
+        cls = await db.get(CharacterClass, char.class_code)
+        class_name = cls.name_ru if cls else char.class_code
         raise CampaignValidationError(
-            f"Class '{char.class_code}' is not allowed in this campaign"
+            f"Класс «{class_name}» не разрешён в этой кампании"
         )

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { campaignsApi } from "@/api/campaigns";
 import { charactersApi } from "@/api/characters";
@@ -55,15 +55,19 @@ const initialDraft: DraftState = {
 
 export default function CharacterWizardPage() {
   const navigate = useNavigate();
+  const { id: editingId } = useParams<{ id: string }>();
+  const isEdit = !!editingId;
+
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<DraftState>(initialDraft);
+  const [draftLoaded, setDraftLoaded] = useState(!isEdit);
   const refsStatus = useEnsureRefs();
   const refs = useRefsStore();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const [searchParams] = useSearchParams();
-  const campaignId = searchParams.get("campaign");
+  const campaignId = isEdit ? null : searchParams.get("campaign");
   const [campaign, setCampaign] = useState<Campaign | null>(null);
 
   useEffect(() => {
@@ -77,15 +81,38 @@ export default function CharacterWizardPage() {
       .catch(() => setCampaign(null));
   }, [campaignId]);
 
+  // In edit mode, load the existing character once and prefill the draft.
+  useEffect(() => {
+    if (!editingId) return;
+    charactersApi
+      .get(editingId)
+      .then((c) => {
+        setDraft({
+          race_code: c.race_code,
+          class_code: c.class_code,
+          background_code: c.background_code,
+          ability_scores: c.ability_scores,
+          background_bonuses: c.background_bonuses,
+          chosen_skills: c.chosen_skills,
+          name: c.name,
+          alignment: c.alignment,
+        });
+        setDraftLoaded(true);
+      })
+      .catch((e) =>
+        setSubmitError(e instanceof ApiError ? e.message : "Не удалось загрузить персонажа"),
+      );
+  }, [editingId]);
+
   const eligibleRaces = useMemo(() => {
-    if (!campaign || campaign.allowed_races.length === 0) return refs.races;
+    if (isEdit || !campaign || campaign.allowed_races.length === 0) return refs.races;
     return refs.races.filter((r) => campaign.allowed_races.includes(r.code));
-  }, [refs.races, campaign]);
+  }, [refs.races, campaign, isEdit]);
 
   const eligibleClasses = useMemo(() => {
-    if (!campaign || campaign.allowed_classes.length === 0) return refs.classes;
+    if (isEdit || !campaign || campaign.allowed_classes.length === 0) return refs.classes;
     return refs.classes.filter((c) => campaign.allowed_classes.includes(c.code));
-  }, [refs.classes, campaign]);
+  }, [refs.classes, campaign, isEdit]);
 
   const update = (patch: Partial<DraftState>) =>
     setDraft((d) => ({ ...d, ...patch }));
@@ -124,6 +151,13 @@ export default function CharacterWizardPage() {
         background_bonuses: draft.background_bonuses,
         chosen_skills: draft.chosen_skills,
       };
+
+      if (isEdit && editingId) {
+        await charactersApi.update(editingId, payload);
+        navigate(`/characters/${editingId}`, { replace: true });
+        return;
+      }
+
       const created = await charactersApi.create(payload);
       if (campaignId && campaign) {
         try {
@@ -150,21 +184,30 @@ export default function CharacterWizardPage() {
 
   if (refs.error) return <div className="alert alert-error">{refs.error}</div>;
   if (refsStatus !== "loaded") return <p className="muted">Загрузка справочников…</p>;
+  if (isEdit && !draftLoaded) return <p className="muted">Загрузка персонажа…</p>;
 
   return (
     <>
       <header className="page-header">
         <div>
-          <h1>Создание персонажа</h1>
+          <h1>{isEdit ? "Редактирование персонажа" : "Создание персонажа"}</h1>
           <p>D&D 5.5e (2024). Шаг {step + 1} из {STEPS.length}: {STEPS[step]}</p>
         </div>
       </header>
 
-      {campaign && (
+      {campaign && !isEdit && (
         <div className="alert" style={{ marginBottom: 20 }}>
           Создание персонажа для кампании <b>«{campaign.name}»</b>. Выбор ограничен расами
           и классами, разрешёнными мастером. После создания персонаж будет автоматически
           привязан к кампании.
+        </div>
+      )}
+
+      {isEdit && (
+        <div className="alert" style={{ marginBottom: 20 }}>
+          Редактирование изменит лист персонажа. Если персонаж привязан к кампаниям с
+          ограничениями, новые значения должны им соответствовать — иначе сохранение
+          будет отклонено.
         </div>
       )}
 
@@ -248,7 +291,9 @@ export default function CharacterWizardPage() {
       <div className="wizard-actions">
         <button
           className="btn btn-secondary"
-          onClick={() => navigate("/characters")}
+          onClick={() =>
+            navigate(isEdit && editingId ? `/characters/${editingId}` : "/characters")
+          }
           type="button"
         >
           Отмена
@@ -278,7 +323,11 @@ export default function CharacterWizardPage() {
               disabled={!stepValid || submitting}
               type="button"
             >
-              {submitting ? "Сохраняем…" : "Создать персонажа"}
+              {submitting
+                ? "Сохраняем…"
+                : isEdit
+                  ? "Сохранить изменения"
+                  : "Создать персонажа"}
             </button>
           )}
         </div>

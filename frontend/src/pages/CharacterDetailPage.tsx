@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { charactersApi } from "@/api/characters";
 import {
@@ -11,13 +11,9 @@ import {
   formatModifier,
 } from "@/lib/dnd";
 import { byCode } from "@/lib/refs";
+import { useAuthStore } from "@/store/auth";
 import { useEnsureRefs, useRefsStore } from "@/store/refs";
-import type {
-  AbilityCode,
-  AbilityScores,
-  Alignment,
-  Character,
-} from "@/types/character";
+import type { AbilityCode, AbilityScores, Character } from "@/types/character";
 import type {
   Ability,
   Background,
@@ -39,6 +35,7 @@ interface RefsBundle {
 export default function CharacterDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const currentUser = useAuthStore((s) => s.user);
 
   const refsStatus = useEnsureRefs();
   const refsRaw = useRefsStore();
@@ -56,7 +53,6 @@ export default function CharacterDetailPage() {
   const [character, setCharacter] = useState<Character | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -99,6 +95,7 @@ export default function CharacterDetailPage() {
   const bg = refs.backgrounds[character.background_code];
   const alignmentLabel =
     ALIGNMENT_OPTIONS.find((a) => a.code === character.alignment)?.name_ru ?? character.alignment;
+  const isOwner = currentUser?.id === character.user_id;
 
   return (
     <>
@@ -107,21 +104,29 @@ export default function CharacterDetailPage() {
           <div className="row" style={{ gap: 8, marginBottom: 4 }}>
             <h1>{character.name}</h1>
             {character.is_archived && <span className="badge">В архиве</span>}
+            {!isOwner && <span className="badge">Просмотр от мастера</span>}
           </div>
           <p>
             {race?.name_ru} · {cls?.name_ru} · {bg?.name_ru} · {alignmentLabel}
           </p>
         </div>
         <div className="row">
-          <button className="btn btn-secondary" onClick={() => setEditing((e) => !e)}>
-            {editing ? "Закрыть" : "Редактировать"}
-          </button>
-          <button className="btn btn-secondary" onClick={onArchiveToggle}>
-            {character.is_archived ? "Восстановить" : "Архивировать"}
-          </button>
-          <button className="btn btn-ghost" onClick={onDelete}>
-            Удалить
-          </button>
+          <Link
+            to={`/characters/${character.id}/edit`}
+            className="btn btn-secondary"
+          >
+            Редактировать
+          </Link>
+          {isOwner && (
+            <>
+              <button className="btn btn-secondary" onClick={onArchiveToggle}>
+                {character.is_archived ? "Восстановить" : "Архивировать"}
+              </button>
+              <button className="btn btn-ghost" onClick={onDelete}>
+                Удалить
+              </button>
+            </>
+          )}
         </div>
       </header>
 
@@ -131,99 +136,8 @@ export default function CharacterDetailPage() {
         </div>
       )}
 
-      {editing && (
-        <EditPanel
-          character={character}
-          onSaved={(c) => {
-            setCharacter(c);
-            setEditing(false);
-          }}
-          onCancel={() => setEditing(false)}
-        />
-      )}
-
       <CharacterSheet character={character} refs={refs} />
     </>
-  );
-}
-
-/* ---------------- Edit panel ---------------- */
-
-function EditPanel({
-  character,
-  onSaved,
-  onCancel,
-}: {
-  character: Character;
-  onSaved: (c: Character) => void;
-  onCancel: () => void;
-}) {
-  const [name, setName] = useState(character.name);
-  const [alignment, setAlignment] = useState<Alignment>(character.alignment);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const dirty = name !== character.name || alignment !== character.alignment;
-
-  const onSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!dirty) return;
-    setError(null);
-    setSaving(true);
-    try {
-      const updated = await charactersApi.update(character.id, { name, alignment });
-      onSaved(updated);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Ошибка сохранения");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <section className="card" style={{ marginBottom: 20 }}>
-      <header style={{ marginBottom: 16 }}>
-        <h2 className="card-title">Редактирование</h2>
-        <p className="card-subtitle">
-          Доступны имя и мировоззрение. Прочие параметры в полном редакторе появятся позже.
-        </p>
-      </header>
-      <form className="form" onSubmit={onSubmit}>
-        <div className="field">
-          <label className="label">Имя</label>
-          <input
-            className="input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            maxLength={64}
-          />
-        </div>
-        <div className="field">
-          <label className="label">Мировоззрение</label>
-          <select
-            className="select"
-            value={alignment}
-            onChange={(e) => setAlignment(e.target.value as Alignment)}
-          >
-            {ALIGNMENT_OPTIONS.map((a) => (
-              <option key={a.code} value={a.code}>
-                {a.name_ru}
-              </option>
-            ))}
-          </select>
-        </div>
-        {error && <div className="alert alert-error">{error}</div>}
-        <div className="row">
-          <button type="submit" className="btn btn-primary" disabled={!dirty || saving}>
-            {saving ? "Сохраняем…" : "Сохранить"}
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={onCancel}>
-            Отмена
-          </button>
-        </div>
-      </form>
-    </section>
   );
 }
 

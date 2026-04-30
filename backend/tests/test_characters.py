@@ -29,14 +29,14 @@ async def test_create_rejects_skill_overlap_with_background(client, player):
     payload = valid_character_payload(chosen_skills=["arcana", "history"])
     r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
     assert r.status_code == 400
-    assert "Background" in r.json()["detail"]
+    assert "Предыстория" in r.json()["detail"]
 
 
 async def test_create_rejects_wrong_skill_count(client, player):
     payload = valid_character_payload(chosen_skills=["investigation"])
     r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
     assert r.status_code == 400
-    assert "exactly" in r.json()["detail"]
+    assert "ровно" in r.json()["detail"]
 
 
 async def test_create_rejects_skill_outside_class_options(client, player):
@@ -132,6 +132,224 @@ async def test_get_character_of_other_user_returns_404(client, player, player2):
     cid = create.json()["id"]
 
     r = await client.get(f"/api/v1/characters/{cid}", headers=player2["headers"])
+    assert r.status_code == 404
+
+
+async def test_master_can_view_attached_character(client, master, player):
+    # player creates a character and joins master's campaign with it
+    char = (
+        await client.post(
+            "/api/v1/characters",
+            json=valid_character_payload(),
+            headers=player["headers"],
+        )
+    ).json()
+    campaign = (
+        await client.post(
+            "/api/v1/campaigns",
+            json={"name": "Просмотр листов мастером"},
+            headers=master["headers"],
+        )
+    ).json()
+    await client.post(
+        "/api/v1/campaigns/join",
+        json={"invite_code": campaign["invite_code"], "character_id": char["id"]},
+        headers=player["headers"],
+    )
+
+    r = await client.get(f"/api/v1/characters/{char['id']}", headers=master["headers"])
+    assert r.status_code == 200
+    assert r.json()["id"] == char["id"]
+
+
+async def test_owner_can_change_class_with_valid_skills(client, player):
+    char = (
+        await client.post(
+            "/api/v1/characters",
+            json=valid_character_payload(),
+            headers=player["headers"],
+        )
+    ).json()
+    # Switch wizard → fighter, with fighter's allowed skills.
+    r = await client.patch(
+        f"/api/v1/characters/{char['id']}",
+        json={"class_code": "fighter", "chosen_skills": ["acrobatics", "perception"]},
+        headers=player["headers"],
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["class_code"] == "fighter"
+    assert r.json()["chosen_skills"] == ["acrobatics", "perception"]
+
+
+async def test_update_rejects_class_change_without_skill_resync(client, player):
+    """Skills from the old class are no longer valid options for the new class."""
+    char = (
+        await client.post(
+            "/api/v1/characters",
+            json=valid_character_payload(),
+            headers=player["headers"],
+        )
+    ).json()
+    # wizard's chosen_skills (investigation/religion) are not in fighter's options.
+    r = await client.patch(
+        f"/api/v1/characters/{char['id']}",
+        json={"class_code": "fighter"},
+        headers=player["headers"],
+    )
+    assert r.status_code == 400
+
+
+async def test_update_rejects_class_violating_campaign(client, master, player):
+    char = (
+        await client.post(
+            "/api/v1/characters",
+            json=valid_character_payload(),  # wizard
+            headers=player["headers"],
+        )
+    ).json()
+    campaign = (
+        await client.post(
+            "/api/v1/campaigns",
+            json={"name": "Только волшебники", "allowed_classes": ["wizard"]},
+            headers=master["headers"],
+        )
+    ).json()
+    await client.post(
+        "/api/v1/campaigns/join",
+        json={"invite_code": campaign["invite_code"], "character_id": char["id"]},
+        headers=player["headers"],
+    )
+
+    # Try to switch to fighter — campaign forbids non-wizards.
+    r = await client.patch(
+        f"/api/v1/characters/{char['id']}",
+        json={"class_code": "fighter", "chosen_skills": ["acrobatics", "perception"]},
+        headers=player["headers"],
+    )
+    assert r.status_code == 400
+    assert "Только волшебники" in r.json()["detail"]
+
+
+async def test_master_can_change_class_within_campaign_restrictions(client, master, player):
+    char = (
+        await client.post(
+            "/api/v1/characters",
+            json=valid_character_payload(),  # wizard elf sage
+            headers=player["headers"],
+        )
+    ).json()
+    campaign = (
+        await client.post(
+            "/api/v1/campaigns",
+            json={
+                "name": "Маг или плут",
+                "allowed_classes": ["wizard", "rogue"],
+            },
+            headers=master["headers"],
+        )
+    ).json()
+    await client.post(
+        "/api/v1/campaigns/join",
+        json={"invite_code": campaign["invite_code"], "character_id": char["id"]},
+        headers=player["headers"],
+    )
+
+    # Master switches the character to rogue (allowed) and re-picks rogue skills.
+    r = await client.patch(
+        f"/api/v1/characters/{char['id']}",
+        json={
+            "class_code": "rogue",
+            "chosen_skills": ["acrobatics", "deception", "stealth", "perception"],
+        },
+        headers=master["headers"],
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["class_code"] == "rogue"
+    assert len(r.json()["chosen_skills"]) == 4
+
+
+async def test_master_can_edit_attached_character_name(client, master, player):
+    char = (
+        await client.post(
+            "/api/v1/characters",
+            json=valid_character_payload(),
+            headers=player["headers"],
+        )
+    ).json()
+    campaign = (
+        await client.post(
+            "/api/v1/campaigns",
+            json={"name": "Редактирование мастером"},
+            headers=master["headers"],
+        )
+    ).json()
+    await client.post(
+        "/api/v1/campaigns/join",
+        json={"invite_code": campaign["invite_code"], "character_id": char["id"]},
+        headers=player["headers"],
+    )
+
+    r = await client.patch(
+        f"/api/v1/characters/{char['id']}",
+        json={"name": "Изменено мастером"},
+        headers=master["headers"],
+    )
+    assert r.status_code == 200
+    assert r.json()["name"] == "Изменено мастером"
+
+
+async def test_master_cannot_archive_attached_character(client, master, player):
+    """Archiving stays owner-only even if character is in master's campaign."""
+    char = (
+        await client.post(
+            "/api/v1/characters",
+            json=valid_character_payload(),
+            headers=player["headers"],
+        )
+    ).json()
+    campaign = (
+        await client.post(
+            "/api/v1/campaigns",
+            json={"name": "Только владелец архивирует"},
+            headers=master["headers"],
+        )
+    ).json()
+    await client.post(
+        "/api/v1/campaigns/join",
+        json={"invite_code": campaign["invite_code"], "character_id": char["id"]},
+        headers=player["headers"],
+    )
+
+    r = await client.post(
+        f"/api/v1/characters/{char['id']}/archive", headers=master["headers"]
+    )
+    assert r.status_code == 404
+
+
+async def test_master_cannot_delete_attached_character(client, master, player):
+    char = (
+        await client.post(
+            "/api/v1/characters",
+            json=valid_character_payload(),
+            headers=player["headers"],
+        )
+    ).json()
+    campaign = (
+        await client.post(
+            "/api/v1/campaigns",
+            json={"name": "Только владелец удаляет"},
+            headers=master["headers"],
+        )
+    ).json()
+    await client.post(
+        "/api/v1/campaigns/join",
+        json={"invite_code": campaign["invite_code"], "character_id": char["id"]},
+        headers=player["headers"],
+    )
+
+    r = await client.delete(
+        f"/api/v1/characters/{char['id']}", headers=master["headers"]
+    )
     assert r.status_code == 404
 
 

@@ -101,6 +101,12 @@ class CharacterSummary(BaseModel):
 class CharacterUpdate(BaseModel):
     name: Annotated[str, Field(min_length=1, max_length=64)] | None = None
     alignment: str | None = None
+    race_code: str | None = None
+    class_code: str | None = None
+    background_code: str | None = None
+    ability_scores: dict[str, int] | None = None
+    background_bonuses: dict[str, int] | None = None
+    chosen_skills: list[str] | None = None
 
     @field_validator("alignment")
     @classmethod
@@ -109,4 +115,34 @@ class CharacterUpdate(BaseModel):
             return v
         if v not in ALIGNMENTS:
             raise ValueError("Unknown alignment")
+        return v
+
+    @field_validator("ability_scores")
+    @classmethod
+    def _ability_scores(cls, v: dict[str, int] | None) -> dict[str, int] | None:
+        if v is None:
+            return v
+        if set(v.keys()) != ABILITY_KEYS:
+            raise ValueError("ability_scores must contain all 6 ability codes")
+        if sorted(v.values()) != STANDARD_ARRAY_SORTED:
+            raise ValueError(
+                "ability_scores must be the Standard Array (15, 14, 13, 12, 10, 8)"
+            )
+        return v
+
+    @field_validator("background_bonuses")
+    @classmethod
+    def _background_bonuses(cls, v: dict[str, int] | None) -> dict[str, int] | None:
+        if v is None:
+            return v
+        if not v:
+            raise ValueError("background_bonuses cannot be empty")
+        if any(k not in ABILITY_KEYS for k in v.keys()):
+            raise ValueError("Unknown ability in background_bonuses")
+        if any(b < 1 or b > 2 for b in v.values()):
+            raise ValueError("Each bonus must be 1 or 2")
+        if sum(v.values()) != 3:
+            raise ValueError("background_bonuses must sum to 3")
+        if sorted(v.values()) not in ([1, 1, 1], [1, 2]):
+            raise ValueError("background_bonuses must be +1/+1/+1 or +2/+1")
         return v

@@ -27,12 +27,20 @@ router = APIRouter(prefix="/campaigns", tags=["campaigns"])
 
 def _handle(exc: Exception) -> HTTPException:
     if isinstance(exc, CampaignNotFound):
-        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc) or "Not found")
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc) or "Кампания не найдена"
+        )
     if isinstance(exc, CampaignPermissionError):
-        return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc) or "Forbidden")
+        return HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc) or "Недостаточно прав"
+        )
     if isinstance(exc, CampaignValidationError):
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc) or "Bad request")
-    return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Server error")
+        return HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc) or "Некорректный запрос"
+        )
+    return HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Внутренняя ошибка сервера"
+    )
 
 
 @router.get("", response_model=dict[str, list[CampaignSummary]])

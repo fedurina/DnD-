@@ -1,5 +1,5 @@
-import { FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { FormEvent, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { campaignsApi } from "@/api/campaigns";
 import { useAuthStore } from "@/store/auth";
@@ -8,6 +8,8 @@ import { useEnsureRefs, useRefsStore } from "@/store/refs";
 export default function CampaignCreatePage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const { id: editingId } = useParams<{ id: string }>();
+  const isEdit = !!editingId;
 
   useEnsureRefs();
   const races = useRefsStore((s) => s.races);
@@ -18,12 +20,35 @@ export default function CampaignCreatePage() {
   const [allowedRaces, setAllowedRaces] = useState<string[]>([]);
   const [allowedClasses, setAllowedClasses] = useState<string[]>([]);
   const [maxLevel, setMaxLevel] = useState(20);
+  const [isActive, setIsActive] = useState(true);
+  const [loaded, setLoaded] = useState(!isEdit);
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (!editingId) return;
+    campaignsApi
+      .get(editingId)
+      .then((c) => {
+        setName(c.name);
+        setDescription(c.description);
+        setAllowedRaces(c.allowed_races);
+        setAllowedClasses(c.allowed_classes);
+        setMaxLevel(c.max_level);
+        setIsActive(c.is_active);
+        setLoaded(true);
+      })
+      .catch((e) =>
+        setError(e instanceof ApiError ? e.message : "Не удалось загрузить кампанию"),
+      );
+  }, [editingId]);
+
   if (user?.role !== "master") {
-    return <div className="alert alert-error">Только мастер может создавать кампании.</div>;
+    return <div className="alert alert-error">Только мастер может управлять кампаниями.</div>;
+  }
+  if (isEdit && !loaded) {
+    return <p className="muted">Загрузка кампании…</p>;
   }
 
   const toggle = (
@@ -39,6 +64,18 @@ export default function CampaignCreatePage() {
     setError(null);
     setSubmitting(true);
     try {
+      if (isEdit && editingId) {
+        await campaignsApi.update(editingId, {
+          name,
+          description,
+          allowed_races: allowedRaces,
+          allowed_classes: allowedClasses,
+          max_level: maxLevel,
+          is_active: isActive,
+        });
+        navigate(`/campaigns/${editingId}`, { replace: true });
+        return;
+      }
       const created = await campaignsApi.create({
         name,
         description,
@@ -48,7 +85,7 @@ export default function CampaignCreatePage() {
       });
       navigate(`/campaigns/${created.id}`, { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось создать");
+      setError(err instanceof ApiError ? err.message : "Не удалось сохранить");
     } finally {
       setSubmitting(false);
     }
@@ -58,8 +95,12 @@ export default function CampaignCreatePage() {
     <>
       <header className="page-header">
         <div>
-          <h1>Новая кампания</h1>
-          <p>Задайте название и при желании ограничьте расы, классы и уровень.</p>
+          <h1>{isEdit ? "Редактирование кампании" : "Новая кампания"}</h1>
+          <p>
+            {isEdit
+              ? "Если ужесточить ограничения, существующие персонажи могут перестать им соответствовать — рядом с ними появится метка «Требует доработки»."
+              : "Задайте название и при желании ограничьте расы, классы и уровень."}
+          </p>
         </div>
       </header>
 
@@ -102,6 +143,27 @@ export default function CampaignCreatePage() {
           />
         </div>
 
+        {isEdit && (
+          <div className="field">
+            <label
+              className="skill-item"
+              style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
+            >
+              <input
+                type="checkbox"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+              />
+              <span>
+                <b>Кампания активна.</b>{" "}
+                <span className="muted" style={{ marginLeft: 4 }}>
+                  Если выключить, новые игроки не смогут присоединиться по коду.
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
         <div className="card-section">
           <CheckboxGroup
             title="Разрешённые расы"
@@ -125,11 +187,21 @@ export default function CampaignCreatePage() {
         {error && <div className="alert alert-error">{error}</div>}
 
         <div className="row" style={{ justifyContent: "flex-end" }}>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate("/campaigns")}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() =>
+              navigate(isEdit && editingId ? `/campaigns/${editingId}` : "/campaigns")
+            }
+          >
             Отмена
           </button>
           <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {submitting ? "Создаём…" : "Создать кампанию"}
+            {submitting
+              ? "Сохраняем…"
+              : isEdit
+                ? "Сохранить изменения"
+                : "Создать кампанию"}
           </button>
         </div>
       </form>

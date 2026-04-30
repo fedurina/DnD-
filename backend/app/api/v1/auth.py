@@ -26,7 +26,7 @@ async def register(payload: UserCreate, db: AsyncSession = Depends(get_db)) -> U
     if existing is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="User with this email or username already exists",
+            detail="Пользователь с таким email или именем уже существует",
         )
     return await user_service.create_user(db, payload)
 
@@ -37,7 +37,7 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> To
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+            detail="Неверный email или пароль",
         )
     sub = str(user.id)
     return TokenPair(
@@ -53,13 +53,13 @@ async def refresh(payload: RefreshRequest, db: AsyncSession = Depends(get_db)) -
         user_id = uuid.UUID(decoded["sub"])
     except (ValueError, KeyError):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Недействительный refresh-токен"
         )
 
     user = await user_service.get_user_by_id(db, user_id)
     if user is None or not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Недействительный refresh-токен"
         )
 
     return AccessToken(access_token=create_access_token(str(user.id)))

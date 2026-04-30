@@ -33,7 +33,7 @@ async def update_me(
     if taken:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Email or username already taken",
+            detail="Email или имя пользователя уже заняты",
         )
 
     return await user_service.update_user(
@@ -53,5 +53,5 @@ async def change_password(
     if not ok:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current password is incorrect",
+            detail="Текущий пароль неверен",
         )

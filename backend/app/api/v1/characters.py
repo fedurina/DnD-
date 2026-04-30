@@ -49,7 +49,7 @@ async def get_character(
 ):
     char = await character_service.get_character(db, current_user, character_id)
     if char is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Персонаж не найден")
     return char
 
 
@@ -60,9 +60,14 @@ async def update_character(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    char = await character_service.update_character(db, current_user, character_id, payload)
+    try:
+        char = await character_service.update_character(
+            db, current_user, character_id, payload
+        )
+    except CharacterValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     if char is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Персонаж не найден")
     return char
 
 
@@ -76,7 +81,7 @@ async def archive_character(
         db, current_user, character_id, archived=True
     )
     if char is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Персонаж не найден")
     return char
 
 
@@ -90,7 +95,7 @@ async def unarchive_character(
         db, current_user, character_id, archived=False
     )
     if char is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Персонаж не найден")
     return char
 
 
@@ -102,4 +107,4 @@ async def delete_character(
 ):
     ok = await character_service.delete_character(db, current_user, character_id)
     if not ok:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Персонаж не найден")

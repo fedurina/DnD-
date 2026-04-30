@@ -50,6 +50,7 @@ class CampaignMemberOut(BaseModel):
     username: str
     character_id: uuid.UUID | None
     character_name: str | None
+    needs_attention: bool = False
     joined_at: datetime
 
 
@@ -69,6 +70,9 @@ class CampaignSummary(BaseModel):
     is_active: bool
     member_count: int
     my_character_id: uuid.UUID | None = None
+    # For owned campaigns: at least one member's character mismatches restrictions.
+    # For joined campaigns: my own attached character mismatches.
+    needs_attention: bool = False
     created_at: datetime
 
 

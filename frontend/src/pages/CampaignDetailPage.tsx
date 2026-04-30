@@ -122,6 +122,14 @@ export default function CampaignDetailPage() {
           </p>
         </div>
         <div className="row">
+          {isMaster && (
+            <Link
+              to={`/campaigns/${campaign.id}/edit`}
+              className="btn btn-secondary"
+            >
+              Редактировать
+            </Link>
+          )}
           {isMaster ? (
             <button className="btn btn-ghost" onClick={onDelete}>Удалить</button>
           ) : myMembership ? (
@@ -178,6 +186,7 @@ export default function CampaignDetailPage() {
           <CharacterAttachSection
             campaign={campaign}
             currentCharacterId={myMembership.character_id}
+            currentNeedsAttention={myMembership.needs_attention}
             onChanged={refresh}
             onError={(msg) => setActionError(msg)}
           />
@@ -203,7 +212,22 @@ export default function CampaignDetailPage() {
                 {campaign.members.map((m) => (
                   <tr key={m.user_id}>
                     <td>{m.username}</td>
-                    <td className="muted">{m.character_name ?? "—"}</td>
+                    <td>
+                      {m.character_id && m.character_name ? (
+                        <span className="row" style={{ gap: 8 }}>
+                          <Link to={`/characters/${m.character_id}`}>
+                            {m.character_name}
+                          </Link>
+                          {m.needs_attention && (
+                            <span className="badge" title="Не соответствует ограничениям кампании">
+                              Требует доработки
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
                     <td className="num">
                       {isMaster && (
                         <button
@@ -228,11 +252,13 @@ export default function CampaignDetailPage() {
 function CharacterAttachSection({
   campaign,
   currentCharacterId,
+  currentNeedsAttention,
   onChanged,
   onError,
 }: {
   campaign: Campaign;
   currentCharacterId: string | null;
+  currentNeedsAttention: boolean;
   onChanged: () => void;
   onError: (msg: string) => void;
 }) {
@@ -285,6 +311,12 @@ function CharacterAttachSection({
           Доступны только активные персонажи, проходящие по ограничениям кампании.
         </p>
       </header>
+      {currentCharacterId && currentNeedsAttention && (
+        <div className="alert alert-error" style={{ marginBottom: 12 }}>
+          Текущий персонаж не соответствует ограничениям кампании. Откройте лист и
+          поправьте параметры, либо выберите другого подходящего ниже.
+        </div>
+      )}
       {!chars ? (
         <p className="muted">Загрузка…</p>
       ) : eligible.length === 0 ? (
