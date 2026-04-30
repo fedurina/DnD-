@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import AuthLayout from "@/components/AuthLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import DashboardPage from "@/pages/DashboardPage";
@@ -15,6 +16,7 @@ import CampaignDetailPage from "@/pages/CampaignDetailPage";
 import ReferencesPage from "@/pages/ReferencesPage";
 
 export const router = createBrowserRouter([
+  { path: "/", element: <LandingPage /> },
   {
     element: <AuthLayout />,
     children: [
@@ -28,7 +30,7 @@ export const router = createBrowserRouter([
       {
         element: <Layout />,
         children: [
-          { path: "/", element: <DashboardPage /> },
+          { path: "/dashboard", element: <DashboardPage /> },
           { path: "/profile", element: <ProfilePage /> },
           { path: "/characters", element: <CharactersPage /> },
           { path: "/characters/new", element: <CharacterWizardPage /> },

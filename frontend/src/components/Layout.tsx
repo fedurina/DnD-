@@ -12,7 +12,7 @@ import {
 } from "./icons";
 
 const NAV = [
-  { to: "/", label: "Кабинет", icon: HomeIcon, end: true },
+  { to: "/dashboard", label: "Кабинет", icon: HomeIcon, end: true },
   { to: "/characters", label: "Персонажи", icon: SwordIcon },
   { to: "/campaigns", label: "Кампании", icon: UsersIcon },
   { to: "/references", label: "Справочник", icon: BookIcon },
@@ -44,7 +44,7 @@ export default function Layout() {
 
   const onLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/");
   };
 
   const initials = user ? user.username.slice(0, 2).toUpperCase() : "?";

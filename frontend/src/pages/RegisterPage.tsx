@@ -21,7 +21,7 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       await register({ email, username, password, role });
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Ошибка регистрации");
     } finally {

@@ -12,7 +12,7 @@ export default function ProtectedRoute() {
     );
   }
   if (status !== "authenticated") {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
   return <Outlet />;
 }
