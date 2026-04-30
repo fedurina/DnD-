@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "@/api/client";
+import { campaignsApi } from "@/api/campaigns";
 import { charactersApi } from "@/api/characters";
 import {
   ABILITY_NAMES_RU,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/dnd";
 import { byCode } from "@/lib/refs";
 import { useEnsureRefs, useRefsStore } from "@/store/refs";
+import type { Campaign } from "@/types/campaign";
 import type {
   AbilityCode,
   AbilityScores,
@@ -60,6 +62,31 @@ export default function CharacterWizardPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [searchParams] = useSearchParams();
+  const campaignId = searchParams.get("campaign");
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
+
+  useEffect(() => {
+    if (!campaignId) {
+      setCampaign(null);
+      return;
+    }
+    campaignsApi
+      .get(campaignId)
+      .then(setCampaign)
+      .catch(() => setCampaign(null));
+  }, [campaignId]);
+
+  const eligibleRaces = useMemo(() => {
+    if (!campaign || campaign.allowed_races.length === 0) return refs.races;
+    return refs.races.filter((r) => campaign.allowed_races.includes(r.code));
+  }, [refs.races, campaign]);
+
+  const eligibleClasses = useMemo(() => {
+    if (!campaign || campaign.allowed_classes.length === 0) return refs.classes;
+    return refs.classes.filter((c) => campaign.allowed_classes.includes(c.code));
+  }, [refs.classes, campaign]);
+
   const update = (patch: Partial<DraftState>) =>
     setDraft((d) => ({ ...d, ...patch }));
 
@@ -98,6 +125,21 @@ export default function CharacterWizardPage() {
         chosen_skills: draft.chosen_skills,
       };
       const created = await charactersApi.create(payload);
+      if (campaignId && campaign) {
+        try {
+          await campaignsApi.attachCharacter(campaignId, created.id);
+          navigate(`/campaigns/${campaignId}`, { replace: true });
+          return;
+        } catch (attachErr) {
+          // Character was created, but attach failed (e.g. validation surprise).
+          setSubmitError(
+            attachErr instanceof ApiError
+              ? `Персонаж создан, но не удалось привязать к кампании: ${attachErr.message}`
+              : "Персонаж создан, но не удалось привязать к кампании",
+          );
+          return;
+        }
+      }
       navigate(`/characters`, { replace: true, state: { highlightId: created.id } });
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : "Ошибка сохранения");
@@ -118,19 +160,27 @@ export default function CharacterWizardPage() {
         </div>
       </header>
 
+      {campaign && (
+        <div className="alert" style={{ marginBottom: 20 }}>
+          Создание персонажа для кампании <b>«{campaign.name}»</b>. Выбор ограничен расами
+          и классами, разрешёнными мастером. После создания персонаж будет автоматически
+          привязан к кампании.
+        </div>
+      )}
+
       <Stepper step={step} />
 
       <div className="card">
         {step === 0 && (
           <RaceStep
-            races={refs.races}
+            races={eligibleRaces}
             value={draft.race_code}
             onChange={(code) => update({ race_code: code })}
           />
         )}
         {step === 1 && (
           <ClassStep
-            classes={refs.classes}
+            classes={eligibleClasses}
             abilityByCode={byCode(refs.abilities)}
             value={draft.class_code}
             onChange={(code) =>

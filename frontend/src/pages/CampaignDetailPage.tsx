@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { campaignsApi } from "@/api/campaigns";
 import { charactersApi } from "@/api/characters";
@@ -288,9 +288,17 @@ function CharacterAttachSection({
       {!chars ? (
         <p className="muted">Загрузка…</p>
       ) : eligible.length === 0 ? (
-        <p className="muted" style={{ fontSize: 14 }}>
-          Нет подходящих персонажей. Создайте подходящего на странице Персонажи.
-        </p>
+        <div>
+          <p className="muted" style={{ fontSize: 14, marginBottom: 12 }}>
+            Нет подходящих персонажей под ограничения этой кампании.
+          </p>
+          <Link
+            to={`/characters/new?campaign=${campaign.id}`}
+            className="btn btn-primary"
+          >
+            Создать персонажа для кампании
+          </Link>
+        </div>
       ) : (
         <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
           <select
@@ -313,6 +321,13 @@ function CharacterAttachSection({
           >
             {saving ? "Сохраняем…" : "Сохранить"}
           </button>
+          <Link
+            to={`/characters/new?campaign=${campaign.id}`}
+            className="btn btn-ghost"
+            style={{ marginLeft: "auto" }}
+          >
+            Создать нового
+          </Link>
         </div>
       )}
     </section>
