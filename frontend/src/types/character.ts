@@ -18,11 +18,18 @@ export interface CharacterCreatePayload {
   chosen_skills: string[];
 }
 
+export interface CharacterCampaignBrief {
+  id: string;
+  name: string;
+  needs_attention: boolean;
+}
+
 export interface Character extends CharacterCreatePayload {
   id: string;
   user_id: string;
   level: number;
   is_archived: boolean;
+  campaigns: CharacterCampaignBrief[];
   created_at: string;
   updated_at: string;
 }
@@ -35,6 +42,7 @@ export interface CharacterSummary {
   class_code: string;
   background_code: string;
   is_archived: boolean;
+  campaigns: CharacterCampaignBrief[];
   created_at: string;
 }
 

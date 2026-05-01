@@ -100,6 +100,48 @@ async def list_characters(
     return list(result.scalars().all())
 
 
+def _character_mismatches(character: Character, campaign: Campaign) -> bool:
+    """True if attached character no longer fits campaign rules.
+
+    Mirrors campaign_service._character_mismatches_campaign — kept here to avoid
+    cross-module import of a private symbol.
+    """
+    if character.is_archived:
+        return True
+    if character.level > campaign.max_level:
+        return True
+    if campaign.allowed_races and character.race_code not in campaign.allowed_races:
+        return True
+    if campaign.allowed_classes and character.class_code not in campaign.allowed_classes:
+        return True
+    return False
+
+
+async def get_attached_campaigns_map(
+    db: AsyncSession, characters: list[Character]
+) -> dict[uuid.UUID, list[dict]]:
+    """For each character, return list of attached-campaigns dicts with needs_attention."""
+    if not characters:
+        return {}
+    char_by_id = {c.id: c for c in characters}
+    q = await db.execute(
+        select(CampaignMember.character_id, Campaign)
+        .join(Campaign, Campaign.id == CampaignMember.campaign_id)
+        .where(CampaignMember.character_id.in_(list(char_by_id.keys())))
+    )
+    result: dict[uuid.UUID, list[dict]] = {cid: [] for cid in char_by_id}
+    for char_id, campaign in q.all():
+        char = char_by_id[char_id]
+        result[char_id].append(
+            {
+                "id": campaign.id,
+                "name": campaign.name,
+                "needs_attention": _character_mismatches(char, campaign),
+            }
+        )
+    return result
+
+
 async def _is_master_of_campaign_with_character(
     db: AsyncSession, user: User, character_id: uuid.UUID
 ) -> bool:

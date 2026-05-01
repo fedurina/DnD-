@@ -10,6 +10,13 @@ import type { Background, CharacterClass, Race } from "@/types/reference";
 
 type Filter = "active" | "all" | "archived";
 
+function campaignsBadgeText(n: number): string {
+  // Locative plural in Russian: «в 1 кампании» (singular), «в 2/5/11 кампаниях».
+  // Edge: numbers ending in 1 except 11 take singular ("в 21 кампании").
+  const useSingular = n % 10 === 1 && n % 100 !== 11;
+  return `В ${n} ${useSingular ? "кампании" : "кампаниях"}`;
+}
+
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "active", label: "Активные" },
   { id: "all", label: "Все" },
@@ -156,8 +163,19 @@ function CharacterCard({
     >
       <div className="row-between" style={{ marginBottom: 8 }}>
         <h3 className="card-title">{character.name}</h3>
-        <div className="row" style={{ gap: 6 }}>
+        <div className="row" style={{ gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {character.is_archived && <span className="badge">В архиве</span>}
+          {character.campaigns.some((c) => c.needs_attention) ? (
+            <span className="badge" title="Не соответствует ограничениям одной из кампаний">
+              Требует доработки
+            </span>
+          ) : character.campaigns.length > 0 ? (
+            <span className="badge" title={character.campaigns.map((c) => c.name).join(", ")}>
+              {campaignsBadgeText(character.campaigns.length)}
+            </span>
+          ) : (
+            <span className="badge">Свободный</span>
+          )}
           <span className="badge">Ур. {character.level}</span>
         </div>
       </div>

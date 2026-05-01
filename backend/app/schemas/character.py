@@ -61,6 +61,16 @@ class CharacterCreate(BaseModel):
         return v
 
 
+class CharacterCampaignBrief(BaseModel):
+    """Lightweight reference to a campaign the character is attached to."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    needs_attention: bool = False
+
+
 class CharacterOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -78,6 +88,7 @@ class CharacterOut(BaseModel):
     background_bonuses: dict[str, int]
     chosen_skills: list[str]
     is_archived: bool
+    campaigns: list[CharacterCampaignBrief] = []
 
     created_at: datetime
     updated_at: datetime
@@ -95,6 +106,7 @@ class CharacterSummary(BaseModel):
     class_code: str
     background_code: str
     is_archived: bool
+    campaigns: list[CharacterCampaignBrief] = []
     created_at: datetime
 
 

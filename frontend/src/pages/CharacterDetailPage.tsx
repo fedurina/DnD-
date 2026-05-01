@@ -136,6 +136,29 @@ export default function CharacterDetailPage() {
         </div>
       )}
 
+      {character.campaigns.length > 0 && (
+        <section className="card" style={{ marginBottom: 20 }}>
+          <header style={{ marginBottom: 8 }}>
+            <h2 className="card-title">Привязан к кампаниям</h2>
+            <p className="card-subtitle">
+              Параметры персонажа должны соответствовать ограничениям каждой из них.
+            </p>
+          </header>
+          <ul style={{ paddingLeft: 18, margin: 0, fontSize: 14 }}>
+            {character.campaigns.map((c) => (
+              <li key={c.id} style={{ marginBottom: 4 }}>
+                <Link to={`/campaigns/${c.id}`}>{c.name}</Link>
+                {c.needs_attention && (
+                  <span className="badge" style={{ marginLeft: 8 }}>
+                    Требует доработки
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <CharacterSheet character={character} refs={refs} />
     </>
   );

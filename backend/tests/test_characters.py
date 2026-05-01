@@ -135,6 +135,85 @@ async def test_get_character_of_other_user_returns_404(client, player, player2):
     assert r.status_code == 404
 
 
+async def test_character_response_lists_attached_campaigns(client, master, player):
+    char = (
+        await client.post(
+            "/api/v1/characters",
+            json=valid_character_payload(),
+            headers=player["headers"],
+        )
+    ).json()
+    assert char["campaigns"] == []  # newly created — no attachments
+
+    campaign = (
+        await client.post(
+            "/api/v1/campaigns",
+            json={"name": "Лист персонажа знает о кампаниях"},
+            headers=master["headers"],
+        )
+    ).json()
+    await client.post(
+        "/api/v1/campaigns/join",
+        json={"invite_code": campaign["invite_code"], "character_id": char["id"]},
+        headers=player["headers"],
+    )
+
+    detail = (
+        await client.get(f"/api/v1/characters/{char['id']}", headers=player["headers"])
+    ).json()
+    assert len(detail["campaigns"]) == 1
+    assert detail["campaigns"][0]["id"] == campaign["id"]
+    assert detail["campaigns"][0]["name"] == campaign["name"]
+    assert detail["campaigns"][0]["needs_attention"] is False
+
+
+async def test_character_list_marks_needs_attention_per_campaign(client, master, player):
+    char = (
+        await client.post(
+            "/api/v1/characters",
+            json=valid_character_payload(),  # elf wizard
+            headers=player["headers"],
+        )
+    ).json()
+    campaign = (
+        await client.post(
+            "/api/v1/campaigns",
+            json={"name": "Только дварфы", "allowed_races": ["dwarf"]},
+            headers=master["headers"],
+        )
+    ).json()
+    # Player joins without character (campaign restriction would block attach with elf).
+    await client.post(
+        "/api/v1/campaigns/join",
+        json={"invite_code": campaign["invite_code"]},
+        headers=player["headers"],
+    )
+    # Master tightens — but elf wasn't allowed to begin with, so this is just confirming.
+    # Now player edits campaign restrictions? They can't, only master can.
+    # Let's instead loosen and attach, then tighten.
+    await client.patch(
+        f"/api/v1/campaigns/{campaign['id']}",
+        json={"allowed_races": []},
+        headers=master["headers"],
+    )
+    await client.patch(
+        f"/api/v1/campaigns/{campaign['id']}/character",
+        json={"character_id": char["id"]},
+        headers=player["headers"],
+    )
+    # Re-tighten — character now mismatches.
+    await client.patch(
+        f"/api/v1/campaigns/{campaign['id']}",
+        json={"allowed_races": ["dwarf"]},
+        headers=master["headers"],
+    )
+
+    listing = (await client.get("/api/v1/characters", headers=player["headers"])).json()
+    target = next(c for c in listing if c["id"] == char["id"])
+    assert len(target["campaigns"]) == 1
+    assert target["campaigns"][0]["needs_attention"] is True
+
+
 async def test_master_can_view_attached_character(client, master, player):
     # player creates a character and joins master's campaign with it
     char = (
