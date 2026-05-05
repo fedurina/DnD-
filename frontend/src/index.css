@@ -374,15 +374,14 @@ hr {
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
-  font-size: 11.5px;
+  padding: 2px 10px;
+  font-size: 12px;
   font-weight: 500;
   border-radius: 999px;
   background: var(--surface-2);
   color: var(--text-muted);
   border: 1px solid var(--border);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 /* =========================================================
@@ -392,6 +391,28 @@ hr {
   display: grid;
   gap: 16px;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-auto-rows: 1fr;
+}
+.grid-cards > .card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.card-title-fade {
+  white-space: nowrap;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    #000 calc(100% - 28px),
+    transparent
+  );
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+.card-subtitle-fade {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* =========================================================

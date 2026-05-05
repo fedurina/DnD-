@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useInstallPrompt } from "@/lib/pwa";
 import { useAuthStore } from "@/store/auth";
 import {
   BookIcon,
   ChevronRightIcon,
+  DownloadIcon,
   HomeIcon,
   LogoutIcon,
   SwordIcon,
@@ -25,6 +27,7 @@ export default function Layout() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
+  const { canInstall, promptInstall } = useInstallPrompt();
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
@@ -86,6 +89,19 @@ export default function Layout() {
             ))}
           </nav>
         </div>
+
+        {canInstall && (
+          <button
+            type="button"
+            className="sidebar-link"
+            style={{ background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}
+            onClick={() => void promptInstall()}
+            title={collapsed ? "Установить приложение" : undefined}
+          >
+            <DownloadIcon />
+            <span className="sidebar-link-label">Установить</span>
+          </button>
+        )}
 
         {user && (
           <div className="sidebar-footer">

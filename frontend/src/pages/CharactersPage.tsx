@@ -117,7 +117,10 @@ export default function CharactersPage() {
       )}
 
       {!isLoading && !isEmpty && (
-        <div className="grid-cards">
+        <div
+          className="grid-cards"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))" }}
+        >
           {characters!.map((c) => (
             <CharacterCard
               key={c.id}
@@ -154,16 +157,28 @@ function CharacterCard({
       to={`/characters/${character.id}`}
       className="card"
       style={{
-        display: "block",
         ...(highlight
           ? { borderColor: "var(--accent)", boxShadow: "0 0 0 3px var(--accent-soft)" }
           : null),
         ...(character.is_archived ? { opacity: 0.7 } : null),
       }}
     >
-      <div className="row-between" style={{ marginBottom: 8 }}>
-        <h3 className="card-title">{character.name}</h3>
-        <div className="row" style={{ gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 12,
+          marginBottom: 10,
+        }}
+      >
+        <h3
+          className="card-title card-title-fade"
+          style={{ flex: 1, minWidth: 0 }}
+        >
+          {character.name}
+        </h3>
+        <div className="row" style={{ gap: 6, flexShrink: 0 }}>
           {character.is_archived && <span className="badge">В архиве</span>}
           {character.campaigns.some((c) => c.needs_attention) ? (
             <span className="badge" title="Не соответствует ограничениям одной из кампаний">
@@ -179,12 +194,19 @@ function CharacterCard({
           <span className="badge">Ур. {character.level}</span>
         </div>
       </div>
-      <p className="muted" style={{ fontSize: 13.5, marginBottom: 12 }}>
+      <p
+        className="muted card-subtitle-fade"
+        style={{ fontSize: 13.5, marginBottom: 12 }}
+      >
         {subtitle}
       </p>
       <div
         className="row"
-        style={{ justifyContent: "flex-end", color: "var(--text-muted)" }}
+        style={{
+          marginTop: "auto",
+          justifyContent: "flex-end",
+          color: "var(--text-muted)",
+        }}
       >
         <span style={{ fontSize: 13 }}>Открыть лист</span>
         <ChevronRightIcon size={14} />

@@ -1,11 +1,13 @@
 import { Suspense } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { ShaderGradient, ShaderGradientCanvas } from "@shadergradient/react";
-import { BookIcon, SwordIcon, UsersIcon } from "@/components/icons";
+import { BookIcon, DownloadIcon, SwordIcon, UsersIcon } from "@/components/icons";
+import { useInstallPrompt } from "@/lib/pwa";
 import { useAuthStore } from "@/store/auth";
 
 export default function LandingPage() {
   const status = useAuthStore((s) => s.status);
+  const { canInstall, promptInstall } = useInstallPrompt();
 
   if (status === "authenticated") {
     return <Navigate to="/dashboard" replace />;
@@ -76,6 +78,16 @@ export default function LandingPage() {
             <span>D&D Manager</span>
           </div>
           <nav className="row">
+            {canInstall && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => void promptInstall()}
+              >
+                <DownloadIcon size={16} />
+                Установить
+              </button>
+            )}
             <Link to="/login" className="btn btn-secondary">Войти</Link>
             <Link to="/register" className="btn btn-primary">Регистрация</Link>
           </nav>

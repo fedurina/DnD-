@@ -19,6 +19,9 @@ dist/
 build/
 .vite/
 
+# Vite PWA dev artifacts
+dev-dist/
+
 # IDE
 .vscode/
 .idea/

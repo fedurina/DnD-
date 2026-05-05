@@ -71,6 +71,14 @@ export const PlusIcon = ({ size, className }: IconProps) => (
   </svg>
 );
 
+export const DownloadIcon = ({ size, className }: IconProps) => (
+  <svg {...base(size)} className={className}>
+    <path d="M12 3v12" />
+    <polyline points="7 10 12 15 17 10" />
+    <path d="M5 21h14" />
+  </svg>
+);
+
 export const SparklesIcon = ({ size, className }: IconProps) => (
   <svg {...base(size)} className={className}>
     <path d="M12 3l1.8 4.5L18 9l-4.2 1.5L12 15l-1.8-4.5L6 9l4.2-1.5L12 3z" />
