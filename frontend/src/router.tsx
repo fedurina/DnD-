@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 import Layout from "@/components/Layout";
 import AuthLayout from "@/components/AuthLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -14,6 +14,7 @@ import CampaignsPage from "@/pages/CampaignsPage";
 import CampaignCreatePage from "@/pages/CampaignCreatePage";
 import CampaignDetailPage from "@/pages/CampaignDetailPage";
 import ReferencesPage from "@/pages/ReferencesPage";
+import NotFoundPage from "@/pages/NotFoundPage";
 
 export const router = createBrowserRouter([
   { path: "/", element: <LandingPage /> },
@@ -45,5 +46,5 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  { path: "*", element: <Navigate to="/" replace /> },
+  { path: "*", element: <NotFoundPage /> },
 ]);

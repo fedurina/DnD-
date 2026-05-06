@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { RouterProvider } from "react-router-dom";
 import { router } from "./router";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAuthStore } from "@/store/auth";
 
 export default function App() {
@@ -16,5 +17,9 @@ export default function App() {
     bootstrap();
   }, [bootstrap]);
 
-  return <RouterProvider router={router} />;
+  return (
+    <ErrorBoundary>
+      <RouterProvider router={router} />
+    </ErrorBoundary>
+  );
 }
