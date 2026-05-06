@@ -13,8 +13,8 @@ export default function ProfilePage() {
 
   if (!user) return null;
 
-  const onLogout = () => {
-    logout();
+  const onLogout = async () => {
+    await logout();
     navigate("/");
   };
 

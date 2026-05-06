@@ -17,6 +17,11 @@ TEST_DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "dnd")
 os.environ["DATABASE_URL"] = (
     f"postgresql+asyncpg://{TEST_DB_USER}:{TEST_DB_PASSWORD}@{TEST_DB_HOST}:5432/{TEST_DB_NAME}"
 )
+os.environ.setdefault(
+    "JWT_SECRET",
+    "test-only-secret-not-for-production-aaaaaaaaaaaaaaaaaaaa",
+)
+os.environ["ENV"] = "test"
 
 import asyncpg  # noqa: E402
 import pytest_asyncio  # noqa: E402

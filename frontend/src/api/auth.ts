@@ -1,5 +1,5 @@
 import { api } from "./client";
-import type { AccessToken, TokenPair, User, UserRole } from "@/types/auth";
+import type { AccessToken, User, UserRole } from "@/types/auth";
 
 export interface RegisterPayload {
   email: string;
@@ -15,8 +15,8 @@ export interface LoginPayload {
 
 export const authApi = {
   register: (payload: RegisterPayload) => api.post<User>("/auth/register", payload),
-  login: (payload: LoginPayload) => api.post<TokenPair>("/auth/login", payload),
-  refresh: (refreshToken: string) =>
-    api.post<AccessToken>("/auth/refresh", { refresh_token: refreshToken }),
+  login: (payload: LoginPayload) => api.post<AccessToken>("/auth/login", payload),
+  refresh: () => api.post<AccessToken>("/auth/refresh"),
+  logout: () => api.post<void>("/auth/logout"),
   me: () => api.get<User>("/auth/me", { auth: true }),
 };

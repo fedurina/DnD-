@@ -34,6 +34,7 @@ async function rawRequest(path: string, options: RequestOptions = {}): Promise<R
   return fetch(`${API_URL}${API_PREFIX}${path}`, {
     ...rest,
     headers: finalHeaders,
+    credentials: "include",
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 }

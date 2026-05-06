@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
 
@@ -17,27 +18,37 @@ def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode(), hashed.encode())
 
 
-def _create_token(subject: str, token_type: TokenType, expires_delta: timedelta) -> str:
-    now = datetime.now(timezone.utc)
-    payload: dict[str, Any] = {
-        "sub": subject,
-        "type": token_type,
-        "iat": now,
-        "exp": now + expires_delta,
-    }
+def _encode(payload: dict[str, Any]) -> str:
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
 def create_access_token(subject: str) -> str:
-    return _create_token(
-        subject, "access", timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    now = datetime.now(timezone.utc)
+    return _encode(
+        {
+            "sub": subject,
+            "type": "access",
+            "iat": now,
+            "exp": now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+        }
     )
 
 
-def create_refresh_token(subject: str) -> str:
-    return _create_token(
-        subject, "refresh", timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+def create_refresh_token(subject: str) -> tuple[str, uuid.UUID, datetime]:
+    """Returns (encoded_jwt, jti, expires_at) so the caller can persist a row."""
+    now = datetime.now(timezone.utc)
+    jti = uuid.uuid4()
+    exp = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    token = _encode(
+        {
+            "sub": subject,
+            "type": "refresh",
+            "jti": str(jti),
+            "iat": now,
+            "exp": exp,
+        }
     )
+    return token, jti, exp
 
 
 def decode_token(token: str, expected_type: TokenType) -> dict[str, Any]:

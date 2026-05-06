@@ -7,6 +7,7 @@ from app.models.reference import (
     Race,
     Skill,
 )
+from app.models.refresh_token import RefreshToken
 from app.models.user import User, UserRole
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "Character",
     "Campaign",
     "CampaignMember",
+    "RefreshToken",
 ]

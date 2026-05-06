@@ -4,11 +4,17 @@ import { router } from "./router";
 import { useAuthStore } from "@/store/auth";
 
 export default function App() {
-  const loadCurrentUser = useAuthStore((s) => s.loadCurrentUser);
+  const bootstrap = useAuthStore((s) => s.bootstrap);
 
   useEffect(() => {
-    loadCurrentUser();
-  }, [loadCurrentUser]);
+    // Drop any leftover tokens from the previous (localStorage-based) auth.
+    try {
+      localStorage.removeItem("auth-storage");
+    } catch {
+      // ignore
+    }
+    bootstrap();
+  }, [bootstrap]);
 
   return <RouterProvider router={router} />;
 }

@@ -6,16 +6,9 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class RefreshRequest(BaseModel):
-    refresh_token: str
-
-
-class TokenPair(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-
-
 class AccessToken(BaseModel):
+    """Login and refresh both return only an access token in the body —
+    refresh token travels in an httpOnly cookie."""
+
     access_token: str
     token_type: str = "bearer"

@@ -45,8 +45,8 @@ export default function Layout() {
     }
   }, [collapsed]);
 
-  const onLogout = () => {
-    logout();
+  const onLogout = async () => {
+    await logout();
     navigate("/");
   };
 
