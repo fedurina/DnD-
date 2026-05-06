@@ -1,13 +1,22 @@
 import { FormEvent, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/auth";
 import { ApiError } from "@/api/client";
+import { LogoutIcon } from "@/components/icons";
 
 export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const changePassword = useAuthStore((s) => s.changePassword);
+  const navigate = useNavigate();
 
   if (!user) return null;
+
+  const onLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   return (
     <>
@@ -18,6 +27,10 @@ export default function ProfilePage() {
             Роль: <span className="badge">{user.role === "master" ? "Мастер" : "Игрок"}</span>
           </p>
         </div>
+        <button className="btn btn-secondary" onClick={onLogout}>
+          <LogoutIcon size={16} />
+          Выйти
+        </button>
       </header>
 
       <div className="stack" style={{ maxWidth: 560 }}>

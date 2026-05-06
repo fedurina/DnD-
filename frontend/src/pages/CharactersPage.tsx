@@ -117,10 +117,7 @@ export default function CharactersPage() {
       )}
 
       {!isLoading && !isEmpty && (
-        <div
-          className="grid-cards"
-          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))" }}
-        >
+        <div className="grid-cards grid-cards-characters">
           {characters!.map((c) => (
             <CharacterCard
               key={c.id}

@@ -77,7 +77,7 @@ export default function LandingPage() {
             <span className="auth-brand-mark">D</span>
             <span>D&D Manager</span>
           </div>
-          <nav className="row">
+          <nav className="row landing-topbar-nav">
             {canInstall && (
               <button
                 type="button"
@@ -89,7 +89,7 @@ export default function LandingPage() {
               </button>
             )}
             <Link to="/login" className="btn btn-secondary">Войти</Link>
-            <Link to="/register" className="btn btn-primary">Регистрация</Link>
+            <Link to="/register" className="btn btn-primary landing-topbar-register">Регистрация</Link>
           </nav>
         </div>
       </header>

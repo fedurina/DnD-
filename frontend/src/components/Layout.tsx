@@ -70,7 +70,7 @@ export default function Layout() {
           </button>
         </div>
 
-        <div>
+        <div className="sidebar-nav-wrap">
           <div className="sidebar-section-label">Навигация</div>
           <nav className="sidebar-nav">
             {NAV.map(({ to, label, icon: Icon, end }) => (
