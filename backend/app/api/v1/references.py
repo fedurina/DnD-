@@ -7,6 +7,8 @@ from app.models.reference import (
     Ability,
     Background,
     CharacterClass,
+    Feat,
+    Item,
     Race,
     Skill,
 )
@@ -14,6 +16,8 @@ from app.schemas.reference import (
     AbilityOut,
     BackgroundOut,
     ClassOut,
+    FeatOut,
+    ItemOut,
     RaceOut,
     SkillOut,
 )
@@ -73,3 +77,15 @@ async def get_background(code: str, db: AsyncSession = Depends(get_db)):
     if obj is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Background not found")
     return obj
+
+
+@router.get("/feats", response_model=list[FeatOut])
+async def list_feats(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Feat).order_by(Feat.name_ru))
+    return result.scalars().all()
+
+
+@router.get("/items", response_model=list[ItemOut])
+async def list_items(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Item).order_by(Item.name_ru))
+    return result.scalars().all()

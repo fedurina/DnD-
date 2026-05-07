@@ -66,6 +66,82 @@ async def test_create_accepts_1_1_1_distribution(client, player):
     assert r.status_code == 201
 
 
+async def test_create_rejects_missing_origin_feat(client, player):
+    # sage's origin feat is "magic_initiate_wizard"; submitting feats=[] must fail
+    payload = valid_character_payload(feats=[])
+    r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
+    assert r.status_code == 400
+    assert "magic_initiate_wizard" in r.json()["detail"]
+
+
+async def test_create_rejects_unknown_feat_code(client, player):
+    payload = valid_character_payload(feats=["magic_initiate_wizard", "totally_made_up_feat"])
+    r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
+    assert r.status_code == 400
+    assert "Неизвестные черты" in r.json()["detail"]
+
+
+async def test_create_rejects_unknown_item_code(client, player):
+    payload = valid_character_payload(items=[{"code": "imaginary_sword", "qty": 1}])
+    r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
+    assert r.status_code == 400
+    assert "Неизвестные предметы" in r.json()["detail"]
+
+
+async def test_create_rejects_duplicate_item_code(client, player):
+    payload = valid_character_payload(
+        items=[{"code": "dagger", "qty": 1}, {"code": "dagger", "qty": 2}],
+    )
+    r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
+    assert r.status_code == 400
+    assert "дважды" in r.json()["detail"]
+
+
+async def test_update_revalidates_feats_on_bg_change(client, player):
+    # Create a sage (origin feat: magic_initiate_wizard).
+    create = await client.post(
+        "/api/v1/characters", json=valid_character_payload(), headers=player["headers"]
+    )
+    assert create.status_code == 201, create.text
+    cid = create.json()["id"]
+
+    # Switch to criminal (origin feat: alert) without updating feats —
+    # the existing feats list (sage's origin) doesn't satisfy the new bg.
+    # We update bonuses + skills so we don't trip earlier validators.
+    r = await client.patch(
+        f"/api/v1/characters/{cid}",
+        json={
+            "background_code": "criminal",
+            "background_bonuses": {"dex": 1, "con": 1, "int": 1},
+        },
+        headers=player["headers"],
+    )
+    assert r.status_code == 400, r.text
+    assert "alert" in r.json()["detail"]
+
+
+async def test_update_bg_change_with_matching_feats_succeeds(client, player):
+    create = await client.post(
+        "/api/v1/characters", json=valid_character_payload(), headers=player["headers"]
+    )
+    cid = create.json()["id"]
+
+    # acolyte requires magic_initiate_cleric; criminal requires alert.
+    # Switch bg AND feats together.
+    r = await client.patch(
+        f"/api/v1/characters/{cid}",
+        json={
+            "background_code": "criminal",
+            "background_bonuses": {"dex": 1, "con": 1, "int": 1},
+            "chosen_skills": ["investigation", "religion"],
+            "feats": ["alert"],
+        },
+        headers=player["headers"],
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["feats"] == ["alert"]
+
+
 async def test_list_excludes_archived_by_default(client, player):
     create = await client.post(
         "/api/v1/characters", json=valid_character_payload(), headers=player["headers"]

@@ -5,17 +5,37 @@ export type Alignment =
   | "lawful_neutral" | "neutral" | "chaotic_neutral"
   | "lawful_evil" | "neutral_evil" | "chaotic_evil";
 
+export type Gender = "male" | "female";
+
+export type LanguageCode =
+  | "common" | "common_sign" | "dwarvish" | "elvish" | "giant"
+  | "gnomish" | "goblin" | "halfling" | "orcish" | "draconic";
+
 export type AbilityScores = Record<AbilityCode, number>;
+
+export interface InventoryEntry {
+  code: string;
+  qty: number;
+}
+
+export type EquipChoice = "set" | "gold";
 
 export interface CharacterCreatePayload {
   name: string;
   alignment: Alignment;
+  gender: Gender;
   race_code: string;
   class_code: string;
   background_code: string;
   ability_scores: AbilityScores;
   background_bonuses: Partial<Record<AbilityCode, number>>;
   chosen_skills: string[];
+  languages: LanguageCode[];
+  feats: string[];
+  items: InventoryEntry[];
+  gold: number;
+  equip_class_choice: EquipChoice;
+  equip_bg_choice: EquipChoice;
 }
 
 export interface CharacterCampaignBrief {
@@ -38,6 +58,7 @@ export interface CharacterSummary {
   id: string;
   name: string;
   level: number;
+  gender: Gender;
   race_code: string;
   class_code: string;
   background_code: string;
@@ -49,4 +70,17 @@ export interface CharacterSummary {
 export interface CharacterUpdatePayload {
   name?: string;
   alignment?: Alignment;
+  gender?: Gender;
+  race_code?: string;
+  class_code?: string;
+  background_code?: string;
+  ability_scores?: AbilityScores;
+  background_bonuses?: Partial<Record<AbilityCode, number>>;
+  chosen_skills?: string[];
+  languages?: LanguageCode[];
+  feats?: string[];
+  items?: InventoryEntry[];
+  gold?: number;
+  equip_class_choice?: EquipChoice;
+  equip_bg_choice?: EquipChoice;
 }

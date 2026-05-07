@@ -5,6 +5,8 @@ import type {
   Ability,
   Background,
   CharacterClass,
+  Feat,
+  Item,
   Race,
   Skill,
 } from "@/types/reference";
@@ -17,6 +19,8 @@ interface RefsState {
   races: Race[];
   classes: CharacterClass[];
   backgrounds: Background[];
+  feats: Feat[];
+  items: Item[];
   status: Status;
   error: string | null;
   load: () => Promise<void>;
@@ -28,6 +32,8 @@ export const useRefsStore = create<RefsState>((set, get) => ({
   races: [],
   classes: [],
   backgrounds: [],
+  feats: [],
+  items: [],
   status: "idle",
   error: null,
   load: async () => {
@@ -35,14 +41,26 @@ export const useRefsStore = create<RefsState>((set, get) => ({
     if (status === "loaded" || status === "loading") return;
     set({ status: "loading", error: null });
     try {
-      const [abilities, skills, races, classes, backgrounds] = await Promise.all([
-        refsApi.abilities(),
-        refsApi.skills(),
-        refsApi.races(),
-        refsApi.classes(),
-        refsApi.backgrounds(),
-      ]);
-      set({ abilities, skills, races, classes, backgrounds, status: "loaded" });
+      const [abilities, skills, races, classes, backgrounds, feats, items] =
+        await Promise.all([
+          refsApi.abilities(),
+          refsApi.skills(),
+          refsApi.races(),
+          refsApi.classes(),
+          refsApi.backgrounds(),
+          refsApi.feats(),
+          refsApi.items(),
+        ]);
+      set({
+        abilities,
+        skills,
+        races,
+        classes,
+        backgrounds,
+        feats,
+        items,
+        status: "loaded",
+      });
     } catch (e) {
       set({
         status: "error",

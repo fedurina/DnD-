@@ -6,6 +6,8 @@ import {
   ABILITY_NAMES_RU,
   ABILITY_ORDER,
   ALIGNMENT_OPTIONS,
+  GENDER_OPTIONS,
+  LANGUAGE_OPTIONS,
   abilityModifier,
   applyBonuses,
   formatModifier,
@@ -18,6 +20,8 @@ import type {
   Ability,
   Background,
   CharacterClass,
+  Feat,
+  Item,
   Race,
   Skill,
 } from "@/types/reference";
@@ -30,6 +34,8 @@ interface RefsBundle {
   races: Record<string, Race>;
   classes: Record<string, CharacterClass>;
   backgrounds: Record<string, Background>;
+  feats: Record<string, Feat>;
+  items: Record<string, Item>;
 }
 
 export default function CharacterDetailPage() {
@@ -47,8 +53,19 @@ export default function CharacterDetailPage() {
       races: byCode(refsRaw.races),
       classes: byCode(refsRaw.classes),
       backgrounds: byCode(refsRaw.backgrounds),
+      feats: byCode(refsRaw.feats),
+      items: byCode(refsRaw.items),
     };
-  }, [refsStatus, refsRaw.abilities, refsRaw.skills, refsRaw.races, refsRaw.classes, refsRaw.backgrounds]);
+  }, [
+    refsStatus,
+    refsRaw.abilities,
+    refsRaw.skills,
+    refsRaw.races,
+    refsRaw.classes,
+    refsRaw.backgrounds,
+    refsRaw.feats,
+    refsRaw.items,
+  ]);
 
   const [character, setCharacter] = useState<Character | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -330,6 +347,88 @@ function CharacterSheet({
         <p style={{ fontSize: 13.5, margin: 0 }}>
           <b>Черта:</b> <span className="muted">{bg?.feat_ru}</span>
         </p>
+      </section>
+
+      <section className="card card-compact">
+        <header style={{ marginBottom: 8 }}>
+          <h3 className="card-title">Личное</h3>
+        </header>
+        <ul style={{ paddingLeft: 18, margin: 0, fontSize: 13.5 }}>
+          <li>
+            Пол:{" "}
+            <b>
+              {GENDER_OPTIONS.find((g) => g.code === character.gender)?.name_ru ??
+                character.gender}
+            </b>
+          </li>
+          <li>
+            Языки:{" "}
+            <b>
+              {character.languages
+                .map(
+                  (c) => LANGUAGE_OPTIONS.find((l) => l.code === c)?.name_ru ?? c,
+                )
+                .join(", ")}
+            </b>
+          </li>
+        </ul>
+      </section>
+
+      {character.feats.length > 0 && (
+        <section className="card card-compact">
+          <header style={{ marginBottom: 8 }}>
+            <h3 className="card-title">Черты</h3>
+          </header>
+          <ul style={{ paddingLeft: 18, margin: 0, fontSize: 13.5 }}>
+            {character.feats.map((c) => {
+              const f = refs.feats[c];
+              return (
+                <li key={c} style={{ marginBottom: 6 }}>
+                  <b>{f?.name_ru ?? c}.</b>{" "}
+                  <span className="muted">{f?.description_ru ?? ""}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      <section className="card card-compact">
+        <header style={{ marginBottom: 8 }}>
+          <h3 className="card-title">Снаряжение и золото</h3>
+        </header>
+        <p style={{ fontSize: 13.5, marginBottom: 8 }}>
+          <b>Золото:</b> {character.gold} зм
+        </p>
+        {character.items.length > 0 ? (
+          <table className="sheet-table" style={{ width: "100%" }}>
+            <thead>
+              <tr>
+                <th>Предмет</th>
+                <th className="num">Кол-во</th>
+              </tr>
+            </thead>
+            <tbody>
+              {character.items.map((it) => (
+                <tr key={it.code}>
+                  <td>
+                    <b>{refs.items[it.code]?.name_ru ?? it.code}</b>
+                    {refs.items[it.code]?.description_ru && (
+                      <div className="muted" style={{ fontSize: 12 }}>
+                        {refs.items[it.code].description_ru}
+                      </div>
+                    )}
+                  </td>
+                  <td className="num">{it.qty}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="muted" style={{ fontSize: 13.5 }}>
+            Без предметов в инвентаре.
+          </p>
+        )}
       </section>
     </div>
   );

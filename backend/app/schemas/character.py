@@ -13,10 +13,39 @@ ALIGNMENTS = {
     "lawful_evil", "neutral_evil", "chaotic_evil",
 }
 
+GENDERS = {"male", "female"}
+
+EQUIP_CHOICES = {"set", "gold"}
+
+LANGUAGE_CODES = {
+    "common", "common_sign", "dwarvish", "elvish", "giant",
+    "gnomish", "goblin", "halfling", "orcish", "draconic",
+}
+REQUIRED_LANGUAGE_COUNT = 3
+
+
+def _validate_languages(v: list[str]) -> list[str]:
+    if "common" not in v:
+        raise ValueError("Общий язык должен быть в списке")
+    if len(v) != REQUIRED_LANGUAGE_COUNT:
+        raise ValueError(f"Нужно выбрать ровно {REQUIRED_LANGUAGE_COUNT} языка")
+    if len(set(v)) != len(v):
+        raise ValueError("Язык не может повторяться")
+    invalid = set(v) - LANGUAGE_CODES
+    if invalid:
+        raise ValueError(f"Неизвестный язык: {sorted(invalid)}")
+    return v
+
+
+class InventoryEntry(BaseModel):
+    code: str
+    qty: int = Field(ge=1)
+
 
 class CharacterCreate(BaseModel):
     name: Annotated[str, Field(min_length=1, max_length=64)]
     alignment: str = "neutral"
+    gender: str
 
     race_code: str
     class_code: str
@@ -25,6 +54,19 @@ class CharacterCreate(BaseModel):
     ability_scores: dict[str, int]
     background_bonuses: dict[str, int]
     chosen_skills: list[str]
+    languages: list[str]
+    feats: list[str]
+    items: list[InventoryEntry]
+    gold: Annotated[int, Field(ge=0)] = 0
+    equip_class_choice: str = "set"
+    equip_bg_choice: str = "set"
+
+    @field_validator("equip_class_choice", "equip_bg_choice")
+    @classmethod
+    def _equip_choice(cls, v: str) -> str:
+        if v not in EQUIP_CHOICES:
+            raise ValueError("Unknown equipment choice")
+        return v
 
     @field_validator("alignment")
     @classmethod
@@ -32,6 +74,18 @@ class CharacterCreate(BaseModel):
         if v not in ALIGNMENTS:
             raise ValueError("Unknown alignment")
         return v
+
+    @field_validator("gender")
+    @classmethod
+    def _gender(cls, v: str) -> str:
+        if v not in GENDERS:
+            raise ValueError("Unknown gender")
+        return v
+
+    @field_validator("languages")
+    @classmethod
+    def _languages(cls, v: list[str]) -> list[str]:
+        return _validate_languages(v)
 
     @field_validator("ability_scores")
     @classmethod
@@ -79,6 +133,7 @@ class CharacterOut(BaseModel):
     name: str
     alignment: str
     level: int
+    gender: str
 
     race_code: str
     class_code: str
@@ -87,6 +142,12 @@ class CharacterOut(BaseModel):
     ability_scores: dict[str, int]
     background_bonuses: dict[str, int]
     chosen_skills: list[str]
+    languages: list[str]
+    feats: list[str]
+    items: list[InventoryEntry]
+    gold: int
+    equip_class_choice: str
+    equip_bg_choice: str
     is_archived: bool
     campaigns: list[CharacterCampaignBrief] = []
 
@@ -102,6 +163,7 @@ class CharacterSummary(BaseModel):
     id: uuid.UUID
     name: str
     level: int
+    gender: str
     race_code: str
     class_code: str
     background_code: str
@@ -113,12 +175,28 @@ class CharacterSummary(BaseModel):
 class CharacterUpdate(BaseModel):
     name: Annotated[str, Field(min_length=1, max_length=64)] | None = None
     alignment: str | None = None
+    gender: str | None = None
     race_code: str | None = None
     class_code: str | None = None
     background_code: str | None = None
     ability_scores: dict[str, int] | None = None
     background_bonuses: dict[str, int] | None = None
     chosen_skills: list[str] | None = None
+    languages: list[str] | None = None
+    feats: list[str] | None = None
+    items: list[InventoryEntry] | None = None
+    gold: Annotated[int, Field(ge=0)] | None = None
+    equip_class_choice: str | None = None
+    equip_bg_choice: str | None = None
+
+    @field_validator("equip_class_choice", "equip_bg_choice")
+    @classmethod
+    def _equip_choice_opt(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        if v not in EQUIP_CHOICES:
+            raise ValueError("Unknown equipment choice")
+        return v
 
     @field_validator("alignment")
     @classmethod
@@ -128,6 +206,22 @@ class CharacterUpdate(BaseModel):
         if v not in ALIGNMENTS:
             raise ValueError("Unknown alignment")
         return v
+
+    @field_validator("gender")
+    @classmethod
+    def _gender(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        if v not in GENDERS:
+            raise ValueError("Unknown gender")
+        return v
+
+    @field_validator("languages")
+    @classmethod
+    def _languages_opt(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return v
+        return _validate_languages(v)
 
     @field_validator("ability_scores")
     @classmethod

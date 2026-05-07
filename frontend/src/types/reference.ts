@@ -24,6 +24,11 @@ export interface Race {
   traits: RaceTrait[];
 }
 
+export interface InventoryEntry {
+  code: string;
+  qty: number;
+}
+
 export interface CharacterClass {
   code: string;
   name_ru: string;
@@ -33,6 +38,8 @@ export interface CharacterClass {
   saving_throw_abilities: string[];
   skill_choices_count: number;
   skill_options: string[];
+  starting_equipment: InventoryEntry[];
+  starting_gold_alt: number;
 }
 
 export interface Background {
@@ -41,5 +48,35 @@ export interface Background {
   description_ru: string;
   ability_scores: string[];
   granted_skills: string[];
-  feat_ru: string;
+  feat_code: string;
+  starting_equipment: InventoryEntry[];
+  starting_gold_alt: number;
+}
+
+export type FeatCategory = "origin" | "general" | "fighting_style";
+
+export interface Feat {
+  code: string;
+  name_ru: string;
+  description_ru: string;
+  category: FeatCategory;
+  prerequisites_ru: string | null;
+  is_repeatable: boolean;
+}
+
+export type ItemType =
+  | "weapon"
+  | "armor"
+  | "ammunition"
+  | "gear"
+  | "kit"
+  | "tool"
+  | "currency";
+
+export interface Item {
+  code: string;
+  name_ru: string;
+  description_ru: string;
+  type: ItemType;
+  cost_gp: number | null;
 }

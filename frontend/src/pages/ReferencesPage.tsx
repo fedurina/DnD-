@@ -5,6 +5,7 @@ import type {
   Ability,
   Background,
   CharacterClass,
+  Feat,
   Race,
   Skill,
 } from "@/types/reference";
@@ -21,10 +22,11 @@ const TABS: { id: Tab; label: string }[] = [
 export default function ReferencesPage() {
   const [tab, setTab] = useState<Tab>("races");
   const status = useEnsureRefs();
-  const { abilities, skills, races, classes, backgrounds, error } = useRefsStore();
+  const { abilities, skills, races, classes, backgrounds, feats, error } = useRefsStore();
 
   const skillByCode = useMemo(() => byCode(skills), [skills]);
   const abilityByCode = useMemo(() => byCode(abilities), [abilities]);
+  const featByCode = useMemo(() => byCode(feats), [feats]);
 
   return (
     <>
@@ -57,6 +59,7 @@ export default function ReferencesPage() {
       {status === "loaded" && tab === "backgrounds" && (
         <BackgroundsTab
           backgrounds={backgrounds}
+          featByCode={featByCode}
           skillByCode={skillByCode}
           abilityByCode={abilityByCode}
         />
@@ -134,10 +137,12 @@ function ClassesTab({
 
 function BackgroundsTab({
   backgrounds,
+  featByCode,
   skillByCode,
   abilityByCode,
 }: {
   backgrounds: Background[];
+  featByCode: Record<string, Feat>;
   skillByCode: Record<string, Skill>;
   abilityByCode: Record<string, Ability>;
 }) {
@@ -159,7 +164,10 @@ function BackgroundsTab({
             label="Навыки"
             value={b.granted_skills.map((s) => skillByCode[s]?.name_ru ?? s).join(", ")}
           />
-          <KeyValue label="Черта" value={b.feat_ru} />
+          <KeyValue
+            label="Черта"
+            value={featByCode[b.feat_code]?.name_ru ?? b.feat_code}
+          />
         </article>
       ))}
     </div>

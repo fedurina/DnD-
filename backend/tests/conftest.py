@@ -40,6 +40,8 @@ from app.data.srd_55 import (  # noqa: E402
     ABILITIES,
     BACKGROUNDS,
     CLASSES,
+    FEATS,
+    ITEMS,
     RACES,
     SKILLS,
 )
@@ -48,6 +50,8 @@ from app.models.reference import (  # noqa: E402
     Ability,
     Background,
     CharacterClass,
+    Feat,
+    Item,
     Race,
     Skill,
 )
@@ -100,6 +104,8 @@ async def setup_database():
         db.add_all([Ability(**r) for r in ABILITIES])
         db.add_all([Skill(**r) for r in SKILLS])
         db.add_all([Race(**r) for r in RACES])
+        db.add_all([Feat(**r) for r in FEATS])
+        db.add_all([Item(**r) for r in ITEMS])
         db.add_all([CharacterClass(**r) for r in CLASSES])
         db.add_all([Background(**r) for r in BACKGROUNDS])
         await db.commit()
@@ -135,6 +141,7 @@ def valid_character_payload(**overrides) -> dict:
     payload = {
         "name": "Тестовый",
         "alignment": "neutral",
+        "gender": "female",
         "race_code": "elf",
         "class_code": "wizard",
         "background_code": "sage",
@@ -143,6 +150,13 @@ def valid_character_payload(**overrides) -> dict:
         },
         "background_bonuses": {"int": 2, "wis": 1},
         "chosen_skills": ["investigation", "religion"],
+        "languages": ["common", "elvish", "draconic"],
+        # sage's origin feat
+        "feats": ["magic_initiate_wizard"],
+        "items": [],
+        "gold": 55,
+        "equip_class_choice": "gold",
+        "equip_bg_choice": "gold",
     }
     payload.update(overrides)
     return payload

@@ -24,6 +24,7 @@ class Character(Base):
     name: Mapped[str] = mapped_column(String(64), nullable=False)
     alignment: Mapped[str] = mapped_column(String(32), nullable=False, default="neutral")
     level: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    gender: Mapped[str] = mapped_column(String(16), nullable=False)
 
     race_code: Mapped[str] = mapped_column(
         String(32), ForeignKey("ref_races.code", ondelete="RESTRICT"), nullable=False
@@ -41,6 +42,17 @@ class Character(Base):
     background_bonuses: Mapped[dict] = mapped_column(JSONB, nullable=False)
     # Skills picked from class.skill_options (background skills are auto, not stored here)
     chosen_skills: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    # Language codes (e.g. ["common", "elvish", "draconic"]). Common is always included.
+    languages: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    # Feat codes (origin feat from background is always included).
+    feats: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    # Inventory snapshot at creation: [{"code": "leather_armor", "qty": 1}, ...]
+    items: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    # Gold pieces.
+    gold: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Equipment choice flags ("set" or "gold") — drive how items/gold are derived.
+    equip_class_choice: Mapped[str] = mapped_column(String(8), nullable=False, default="set")
+    equip_bg_choice: Mapped[str] = mapped_column(String(8), nullable=False, default="set")
 
     is_archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 

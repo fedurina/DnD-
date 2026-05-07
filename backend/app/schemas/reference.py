@@ -31,6 +31,11 @@ class RaceOut(_Base):
     traits: list[RaceTrait]
 
 
+class InventoryEntry(BaseModel):
+    code: str
+    qty: int
+
+
 class ClassOut(_Base):
     code: str
     name_ru: str
@@ -40,6 +45,8 @@ class ClassOut(_Base):
     saving_throw_abilities: list[str]
     skill_choices_count: int
     skill_options: list[str]
+    starting_equipment: list[InventoryEntry]
+    starting_gold_alt: int
 
 
 class BackgroundOut(_Base):
@@ -48,4 +55,23 @@ class BackgroundOut(_Base):
     description_ru: str
     ability_scores: list[str]
     granted_skills: list[str]
-    feat_ru: str
+    feat_code: str
+    starting_equipment: list[InventoryEntry]
+    starting_gold_alt: int
+
+
+class FeatOut(_Base):
+    code: str
+    name_ru: str
+    description_ru: str
+    category: str
+    prerequisites_ru: str | None
+    is_repeatable: bool
+
+
+class ItemOut(_Base):
+    code: str
+    name_ru: str
+    description_ru: str
+    type: str
+    cost_gp: float | None

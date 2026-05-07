@@ -5,9 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.campaign import Campaign, CampaignMember
 from app.models.character import Character
-from app.models.reference import Background, CharacterClass, Race
+from app.models.reference import Background, CharacterClass, Feat, Item, Race
 from app.models.user import User
-from app.schemas.character import CharacterCreate, CharacterUpdate
+from app.schemas.character import CharacterCreate, CharacterUpdate, InventoryEntry
 
 
 class CharacterValidationError(ValueError):
@@ -50,6 +50,39 @@ def _validate_skills(
         )
 
 
+async def _validate_feats(db: AsyncSession, feat_codes: list[str], bg: Background) -> None:
+    if bg.feat_code and bg.feat_code not in feat_codes:
+        raise CharacterValidationError(
+            f"Черта предыстории «{bg.feat_code}» должна быть в списке"
+        )
+    if len(set(feat_codes)) != len(feat_codes):
+        raise CharacterValidationError("Черта не может повторяться")
+    if not feat_codes:
+        return
+    rows = await db.execute(select(Feat.code).where(Feat.code.in_(feat_codes)))
+    existing = {r[0] for r in rows.all()}
+    missing = set(feat_codes) - existing
+    if missing:
+        raise CharacterValidationError(
+            f"Неизвестные черты: {sorted(missing)}"
+        )
+
+
+async def _validate_items(db: AsyncSession, items: list[InventoryEntry]) -> None:
+    if not items:
+        return
+    codes = [it.code for it in items]
+    if len(set(codes)) != len(codes):
+        raise CharacterValidationError("Один предмет встречается дважды — увеличьте qty")
+    rows = await db.execute(select(Item.code).where(Item.code.in_(codes)))
+    existing = {r[0] for r in rows.all()}
+    missing = set(codes) - existing
+    if missing:
+        raise CharacterValidationError(
+            f"Неизвестные предметы: {sorted(missing)}"
+        )
+
+
 def _validate_bg_bonus_keys(bonuses: dict[str, int], bg: Background) -> None:
     valid = set(bg.ability_scores)
     invalid = set(bonuses) - valid
@@ -71,17 +104,26 @@ async def create_character(
     _race, cls, bg = await _load_refs(db, payload)
     _validate_skills(payload.chosen_skills, cls, bg)
     _validate_bg_bonus_keys(payload.background_bonuses, bg)
+    await _validate_feats(db, payload.feats, bg)
+    await _validate_items(db, payload.items)
 
     char = Character(
         user_id=user.id,
         name=payload.name,
         alignment=payload.alignment,
+        gender=payload.gender,
         race_code=payload.race_code,
         class_code=payload.class_code,
         background_code=payload.background_code,
         ability_scores=payload.ability_scores,
         background_bonuses=payload.background_bonuses,
         chosen_skills=payload.chosen_skills,
+        languages=payload.languages,
+        feats=payload.feats,
+        items=[it.model_dump() for it in payload.items],
+        gold=payload.gold,
+        equip_class_choice=payload.equip_class_choice,
+        equip_bg_choice=payload.equip_bg_choice,
     )
     db.add(char)
     await db.commit()
@@ -259,11 +301,34 @@ async def update_character(
                 f"в кампании «{campaign.name}»"
             )
 
+    # If background changed, ensure feats still match the new bg's origin feat,
+    # regardless of whether the client also sent a new feats list.
+    bg_changed = payload.background_code is not None and new_bg_code != char.background_code
+    new_feats = list(payload.feats) if payload.feats is not None else list(char.feats)
+    if payload.feats is not None or bg_changed:
+        await _validate_feats(db, new_feats, bg)
+    if payload.items is not None:
+        await _validate_items(db, payload.items)
+
     # Apply.
     if payload.name is not None:
         char.name = payload.name
     if payload.alignment is not None:
         char.alignment = payload.alignment
+    if payload.gender is not None:
+        char.gender = payload.gender
+    if payload.languages is not None:
+        char.languages = list(payload.languages)
+    if payload.feats is not None:
+        char.feats = list(payload.feats)
+    if payload.items is not None:
+        char.items = [it.model_dump() for it in payload.items]
+    if payload.gold is not None:
+        char.gold = payload.gold
+    if payload.equip_class_choice is not None:
+        char.equip_class_choice = payload.equip_class_choice
+    if payload.equip_bg_choice is not None:
+        char.equip_bg_choice = payload.equip_bg_choice
     char.race_code = new_race_code
     char.class_code = new_class_code
     char.background_code = new_bg_code
