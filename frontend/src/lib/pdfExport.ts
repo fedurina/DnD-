@@ -37,38 +37,167 @@ interface PdfRefs {
   subclasses: Record<string, Subclass>;
 }
 
-// Best-effort positional mapping for the top of page 1 of the 2024 fillable
-// template. Field names are non-semantic (auto-generated) so we map by what
-// we believe each top row represents. If something's wrong visually, the
-// summary page appended at the end always has the correct data.
+// Top-of-page mapping. The template has only 3 full-width fields at the top
+// (no separate slot for class/subclass on the same line as background/race),
+// so we pack them via a separator.
 const TOP_FIELDS = {
-  name: "text_1imkp", // top row, full width
-  background: "text_2qgox", // 2nd row, full width
-  class_and_level: "text_3bfkv", // 3rd row, full width
-  level: "text_4deth", // small box right of 1st row
+  name: "text_1imkp", // line 1 — character name
+  background_class: "text_2qgox", // line 2 — predystoria | class
+  race_subclass: "text_3bfkv", // line 3 — vid | subclass
+  level: "text_4deth", // small "УРОВЕНЬ" oval box
+  xp: "text_5mocb", // "ОПЫТ" box below level
+  ac: "text_6agjh", // "КЛАСС ЗАЩИТЫ" box (was text_5mocb — wrong)
 } as const;
 
-// 4 large boxes mid-page (y=629). Best-guess: AC, Initiative, Speed, HP.
-const STAT_BOXES = {
-  ac: "text_13wrft",
-  initiative: "text_14lvnq",
-  speed: "text_15cqja",
-  hp: "text_16wgea",
-} as const;
+// XP thresholds per PHB 2024 (index = level).
+const XP_FOR_LEVEL = [
+  0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
+  85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000,
+];
 
-// 6 ability score boxes — best-guess by reading position from top to bottom.
-// Left column (x≈31): three at y=540, 422, 275.
-// Right column (x≈137): three at y=618, 443, 270.
-// Standard 2024 layout puts STR top-left, then descend. This is a guess —
-// will be refined after visual verification.
-const ABILITY_BOXES: Partial<Record<AbilityCode, string>> = {
-  str: "text_17vpmg", // (31, 540)
-  con: "text_18ruyf", // (31, 422)
-  wis: "text_21kabi", // (31, 275)
-  dex: "text_19lqwv", // (137, 618)
-  int: "text_20zbar", // (138, 443)
-  cha: "text_22bxjy", // (137, 270)
+// Ability tiles. Each tile has a big modifier circle (left) and a small score
+// box (right). Both are fillable form fields. Saving-throw values live just
+// below the tile.
+//
+// Layout in 2024 sheet:
+//   Left column (x≈31):  STR (y=540), DEX (y=422), CON (y=275)
+//   Right column (x≈137): INT (y=618), WIS (y=443), CHA (y=270)
+const ABILITY_FIELDS: Record<
+  AbilityCode,
+  { modifier: string; score: string; save: string }
+> = {
+  str: { modifier: "text_17vpmg", score: "text_23ewgq", save: "text_60zpuk" },
+  dex: { modifier: "text_18ruyf", score: "text_26ccgh", save: "text_68bipd" },
+  con: { modifier: "text_21kabi", score: "text_28owjh", save: "text_72gnbq" },
+  int: { modifier: "text_19lqwv", score: "text_24rqar", save: "text_54bfgy" },
+  wis: { modifier: "text_20zbar", score: "text_25blbj", save: "text_62yaan" },
+  cha: { modifier: "text_22bxjy", score: "text_27jhio", save: "text_73cwxt" },
 };
+
+// 4 boxes mid-page (y=629), best-guess by left-to-right position.
+const HEADER_STAT_BOXES = {
+  initiative: "text_13wrft",
+  speed: "text_14lvnq",
+  size: "text_15cqja",
+  passive_perception: "text_16wgea",
+} as const;
+
+// Proficiency-bonus tile (top-left "БОНУС ВЛАДЕНИЯ"). Best-guess.
+const PROFICIENCY_BONUS_FIELD = "text_427aebp";
+
+// Skill rows under each ability tile. Map: skill code → form field name.
+// Order in template (top to bottom under each tile):
+//   STR: Athletics
+//   DEX: Acrobatics, Sleight of Hand, Stealth
+//   INT: History, Arcana, Nature, Investigation, Religion
+//   WIS: Perception, Survival, Medicine, Insight, Animal Handling
+//   CHA: Performance, Intimidation, Deception, Persuasion
+const SKILL_FIELDS: Record<string, string> = {
+  // STR
+  athletics: "text_61knsn",
+  // DEX
+  acrobatics: "text_69srmm",
+  sleight_of_hand: "text_70obrk",
+  stealth: "text_71pflk",
+  // INT
+  history: "text_55nptn",
+  arcana: "text_56ksru",
+  nature: "text_57bjob",
+  investigation: "text_58zoel",
+  religion: "text_59mfqs",
+  // WIS
+  perception: "text_63uhiv",
+  survival: "text_64odvk",
+  medicine: "text_65hnhb",
+  insight: "text_66djlf",
+  animal_handling: "text_67cr",
+  // CHA
+  performance: "text_74rkfi",
+  intimidation: "text_75pauh",
+  deception: "text_76vfsc",
+  persuasion: "text_77nads",
+};
+
+// Page 1 weapons & spell-attacks table — 6 rows × 4 cols.
+const WEAPON_ROWS: { name: string; bonus: string; damage: string; notes: string }[] = [
+  { name: "text_95mtme",  bonus: "text_101ohoi", damage: "text_107qvwl", notes: "text_113tpwa" },
+  { name: "text_96nzoa",  bonus: "text_102yibj", damage: "text_108aybq", notes: "text_114lhuk" },
+  { name: "text_97iydj",  bonus: "text_103rlae", damage: "text_109slbn", notes: "text_115pcxn" },
+  { name: "text_98wnad",  bonus: "text_104qwkw", damage: "text_110lbdh", notes: "text_116sohv" },
+  { name: "text_99bdzl",  bonus: "text_105gvuz", damage: "text_111ubex", notes: "text_117fabc" },
+  { name: "text_100zmbl", bonus: "text_106vkdo", damage: "text_112omg",  notes: "text_118cokl" },
+];
+
+// Page 2 free-text blocks. We draw text directly onto the page (page.drawText)
+// because multi-line form fields auto-resize the font to fit and renderers
+// produce gigantic glyphs for short content. These rectangles match the
+// underlying form field dimensions; we use them as drawing bounds.
+const PAGE2_BOXES = {
+  // "БИОГРАФИЯ И ХАРАКТЕР" / "ПРЕДЫСТОРИЯ И ЛИЧНОСТЬ" textarea.
+  biography: { x: 412, y: 500, w: 175, h: 130 },
+  // "ЯЗЫКИ" textarea.
+  languages: { x: 412, y: 402, w: 175, h: 28 },
+  // "СНАРЯЖЕНИЕ" textarea.
+  equipment: { x: 412, y: 192, w: 175, h: 165 },
+};
+
+// Single-line below the biography textarea — alignment name (form field is fine here).
+const ALIGNMENT_NAME_FIELD = "text_275cexd";
+
+// Page 1 "ЧЕРТЫ" textarea (bottom-right). We draw feats list onto the page.
+const PAGE1_FEATS_BOX = { x: 412, y: 18, w: 175, h: 165 };
+
+/** Wrap text by words, measuring real glyph width with the given font. */
+function wrapByWidth(
+  text: string,
+  font: PDFFont,
+  size: number,
+  maxWidth: number,
+): string[] {
+  const lines: string[] = [];
+  for (const paragraph of text.split(/\n+/)) {
+    const words = paragraph.split(/\s+/).filter(Boolean);
+    let buf = "";
+    for (const w of words) {
+      const candidate = buf ? `${buf} ${w}` : w;
+      const width = font.widthOfTextAtSize(candidate, size);
+      if (width > maxWidth && buf) {
+        lines.push(buf);
+        buf = w;
+      } else {
+        buf = candidate;
+      }
+    }
+    if (buf) lines.push(buf);
+  }
+  return lines;
+}
+
+/** Draw word-wrapped text into a rectangular box on the given page. */
+function drawWrappedText(
+  page: ReturnType<PDFDocument["getPages"]>[number],
+  text: string,
+  box: { x: number; y: number; w: number; h: number },
+  font: PDFFont,
+  size: number,
+  lineHeight = size * 1.25,
+) {
+  if (!text) return;
+  const lines = wrapByWidth(text, font, size, box.w);
+  // Start near the top of the box.
+  let y = box.y + box.h - size;
+  for (const line of lines) {
+    if (y < box.y) break; // ran out of vertical space
+    page.drawText(line, {
+      x: box.x,
+      y,
+      size,
+      font,
+      color: rgb(0.05, 0.05, 0.07),
+    });
+    y -= lineHeight;
+  }
+}
 
 function safeSetText(
   form: ReturnType<PDFDocument["getForm"]>,
@@ -131,27 +260,135 @@ export async function exportCharacterPdf(
   const pb = proficiencyBonus(character.level);
 
   const classLabel = cls
-    ? `${cls.name_ru} ${character.level}${subclass ? ` (${subclass.name_ru})` : ""}`
+    ? `${cls.name_ru}${cls.name_ru ? ` · ${character.level} ур.` : ""}`
     : "";
   const raceLabel = race?.name_ru ?? "";
   const bgLabel = bg?.name_ru ?? "";
+  const subclassLabel = subclass?.name_ru ?? "";
 
-  // --- Top header (best-effort) ---
+  // Form fields use the PDF template's own font size (any setFontSize call is
+  // ignored by viewers in favour of the field's default appearance). The only
+  // size we actually control is for text we draw directly on the page below.
+  const TEXTAREA_SIZE = 10;
+
+  // --- Top header ---
   safeSetText(form, TOP_FIELDS.name, character.name, cyrFont);
-  safeSetText(form, TOP_FIELDS.background, bgLabel, cyrFont);
-  safeSetText(form, TOP_FIELDS.class_and_level, classLabel, cyrFont);
+  safeSetText(
+    form,
+    TOP_FIELDS.background_class,
+    bgLabel + (classLabel ? `   ·   ${classLabel}` : ""),
+    cyrFont,
+  );
+  safeSetText(
+    form,
+    TOP_FIELDS.race_subclass,
+    raceLabel + (subclassLabel ? `   ·   ${subclassLabel}` : ""),
+    cyrFont,
+  );
   safeSetText(form, TOP_FIELDS.level, String(character.level), cyrFont);
+  safeSetText(
+    form,
+    TOP_FIELDS.xp,
+    String(XP_FOR_LEVEL[Math.min(20, Math.max(1, character.level))]),
+    cyrFont,
+  );
+  safeSetText(form, TOP_FIELDS.ac, String(ac), cyrFont);
 
-  // --- Mid-page stat boxes ---
-  safeSetText(form, STAT_BOXES.ac, String(ac), cyrFont);
-  safeSetText(form, STAT_BOXES.initiative, formatModifier(dexMod), cyrFont);
-  safeSetText(form, STAT_BOXES.speed, String(race?.speed ?? ""), cyrFont);
-  safeSetText(form, STAT_BOXES.hp, String(hp), cyrFont);
-
-  // --- Ability scores ---
+  // --- Ability scores + modifiers + saves ---
+  const profSaves = new Set(cls?.saving_throw_abilities ?? []);
   for (const a of ABILITY_ORDER) {
-    const fname = ABILITY_BOXES[a];
-    if (fname) safeSetText(form, fname, String(finalScores[a]), cyrFont);
+    const f = ABILITY_FIELDS[a];
+    const score = finalScores[a];
+    const mod = abilityModifier(score);
+    const save = mod + (profSaves.has(a) ? pb : 0);
+    safeSetText(form, f.score, String(score), cyrFont);
+    safeSetText(form, f.modifier, formatModifier(mod), cyrFont);
+    safeSetText(form, f.save, formatModifier(save), cyrFont);
+  }
+
+  // --- Skill values (mod + pb if proficient) ---
+  const proficientSkills = new Set([
+    ...(bg?.granted_skills ?? []),
+    ...character.chosen_skills,
+  ]);
+  for (const [skillCode, fieldName] of Object.entries(SKILL_FIELDS)) {
+    const sk = refs.skills[skillCode];
+    if (!sk) continue;
+    const ab = sk.ability_code as AbilityCode;
+    const mod = abilityModifier(finalScores[ab]);
+    const total = mod + (proficientSkills.has(skillCode) ? pb : 0);
+    safeSetText(form, fieldName, formatModifier(total), cyrFont);
+  }
+
+  // --- Mid-page header stats ---
+  const wisMod = abilityModifier(finalScores.wis);
+  const profPerception =
+    character.chosen_skills.includes("perception") ||
+    (bg?.granted_skills ?? []).includes("perception");
+  const passivePerception = 10 + wisMod + (profPerception ? pb : 0);
+  const sizeShort = race?.size === "small" ? "S" : "M";
+  safeSetText(form, HEADER_STAT_BOXES.initiative, formatModifier(dexMod), cyrFont);
+  safeSetText(form, HEADER_STAT_BOXES.speed, String(race?.speed ?? ""), cyrFont);
+  safeSetText(form, HEADER_STAT_BOXES.size, sizeShort, cyrFont);
+  safeSetText(form, HEADER_STAT_BOXES.passive_perception, String(passivePerception), cyrFont);
+
+  // --- Proficiency bonus tile (top-left) ---
+  safeSetText(form, PROFICIENCY_BONUS_FIELD, `+${pb}`, cyrFont);
+
+  // --- Weapons table (page 1) ---
+  const weapons = character.items.filter((it) => refs.items[it.code]?.type === "weapon");
+  weapons.slice(0, WEAPON_ROWS.length).forEach((w, i) => {
+    const row = WEAPON_ROWS[i];
+    const ref = refs.items[w.code];
+    safeSetText(form, row.name, ref?.name_ru ?? w.code, cyrFont);
+    if (w.qty > 1) {
+      safeSetText(form, row.notes, `× ${w.qty}`, cyrFont);
+    }
+  });
+
+  // --- Page 1: feats list (drawn directly to avoid auto-size) ---
+  const pages = doc.getPages();
+  const page1 = pages[0];
+  if (character.feats.length > 0) {
+    const featsText = character.feats
+      .map((c) => refs.feats[c]?.name_ru ?? c)
+      .join("; ");
+    drawWrappedText(page1, featsText, PAGE1_FEATS_BOX, cyrFont, TEXTAREA_SIZE);
+  }
+
+  // --- Page 2: alignment name (form field — single line is fine) ---
+  const alignment = ALIGNMENT_OPTIONS.find((a) => a.code === character.alignment);
+  if (alignment) {
+    safeSetText(form, ALIGNMENT_NAME_FIELD, alignment.name_ru, cyrFont);
+  }
+
+  // --- Page 2: biography/character (alignment description), languages, equipment.
+  //     We draw these directly because multi-line form fields auto-resize and
+  //     produce gigantic glyphs for short content. ---
+  const page2 = pages[1];
+  if (page2 && alignment) {
+    drawWrappedText(
+      page2,
+      alignment.description_ru,
+      PAGE2_BOXES.biography,
+      cyrFont,
+      TEXTAREA_SIZE,
+    );
+  }
+
+  if (page2) {
+    const languageList = character.languages
+      .map((c) => LANGUAGE_OPTIONS.find((l) => l.code === c)?.name_ru ?? c)
+      .join("; ");
+    drawWrappedText(page2, languageList, PAGE2_BOXES.languages, cyrFont, TEXTAREA_SIZE);
+
+    const equipmentParts = character.items.map((it) => {
+      const ref = refs.items[it.code];
+      const name = ref?.name_ru ?? it.code;
+      return it.qty > 1 ? `${name} × ${it.qty}` : name;
+    });
+    if (character.gold > 0) equipmentParts.push(`золото ${character.gold} зм`);
+    drawWrappedText(page2, equipmentParts.join("; "), PAGE2_BOXES.equipment, cyrFont, TEXTAREA_SIZE);
   }
 
   // --- Append a clean summary page so all data is captured regardless of
