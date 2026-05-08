@@ -11,6 +11,8 @@ import {
   abilityModifier,
   applyBonuses,
   formatModifier,
+  hpAtLevel,
+  proficiencyBonus,
 } from "@/lib/dnd";
 import { byCode } from "@/lib/refs";
 import { useAuthStore } from "@/store/auth";
@@ -24,9 +26,8 @@ import type {
   Item,
   Race,
   Skill,
+  Subclass,
 } from "@/types/reference";
-
-const PROFICIENCY_BONUS = 2;
 
 interface RefsBundle {
   abilities: Record<string, Ability>;
@@ -36,6 +37,7 @@ interface RefsBundle {
   backgrounds: Record<string, Background>;
   feats: Record<string, Feat>;
   items: Record<string, Item>;
+  subclasses: Record<string, Subclass>;
 }
 
 export default function CharacterDetailPage() {
@@ -55,6 +57,7 @@ export default function CharacterDetailPage() {
       backgrounds: byCode(refsRaw.backgrounds),
       feats: byCode(refsRaw.feats),
       items: byCode(refsRaw.items),
+      subclasses: byCode(refsRaw.subclasses),
     };
   }, [
     refsStatus,
@@ -65,11 +68,13 @@ export default function CharacterDetailPage() {
     refsRaw.backgrounds,
     refsRaw.feats,
     refsRaw.items,
+    refsRaw.subclasses,
   ]);
 
   const [character, setCharacter] = useState<Character | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -92,6 +97,22 @@ export default function CharacterDetailPage() {
     }
   };
 
+  const onExportPdf = async () => {
+    if (!character || !refs) return;
+    setActionError(null);
+    setExporting(true);
+    try {
+      const mod = await import("@/lib/pdfExport");
+      const bytes = await mod.exportCharacterPdf(character, refs);
+      const safe = character.name.replace(/[^\p{L}\p{N}_-]+/gu, "_") || "character";
+      mod.downloadPdf(bytes, `${safe}.pdf`);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Ошибка экспорта PDF");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const onDelete = async () => {
     if (!character) return;
     if (!confirm(`Удалить персонажа «${character.name}» безвозвратно?`)) return;
@@ -110,6 +131,9 @@ export default function CharacterDetailPage() {
   const race = refs.races[character.race_code];
   const cls = refs.classes[character.class_code];
   const bg = refs.backgrounds[character.background_code];
+  const subclass = character.subclass_code
+    ? refs.subclasses[character.subclass_code] ?? null
+    : null;
   const alignmentLabel =
     ALIGNMENT_OPTIONS.find((a) => a.code === character.alignment)?.name_ru ?? character.alignment;
   const isOwner = currentUser?.id === character.user_id;
@@ -124,7 +148,9 @@ export default function CharacterDetailPage() {
             {!isOwner && <span className="badge">Просмотр от мастера</span>}
           </div>
           <p>
-            {race?.name_ru} · {cls?.name_ru} · {bg?.name_ru} · {alignmentLabel}
+            {race?.name_ru} · {cls?.name_ru}
+            {subclass && <> ({subclass.name_ru})</>} · {character.level} ур. ·{" "}
+            {bg?.name_ru} · {alignmentLabel}
           </p>
         </div>
         <div className="row">
@@ -134,6 +160,13 @@ export default function CharacterDetailPage() {
           >
             Редактировать
           </Link>
+          <button
+            className="btn btn-secondary"
+            onClick={onExportPdf}
+            disabled={exporting}
+          >
+            {exporting ? "Готовим…" : "Скачать PDF"}
+          </button>
           {isOwner && (
             <>
               <button className="btn btn-secondary" onClick={onArchiveToggle}>
@@ -205,9 +238,13 @@ function CharacterSheet({
 
   const conMod = abilityModifier(finalScores.con);
   const dexMod = abilityModifier(finalScores.dex);
-  const hp = (cls?.hit_die ?? 0) + conMod;
+  const hp = hpAtLevel(cls?.hit_die ?? 0, conMod, character.level);
   const ac = 10 + dexMod;
   const initiative = dexMod;
+  const profBonus = proficiencyBonus(character.level);
+  const subclass = character.subclass_code
+    ? refs.subclasses[character.subclass_code] ?? null
+    : null;
 
   const proficientSkills = useMemo(
     () => new Set([...(bg?.granted_skills ?? []), ...character.chosen_skills]),
@@ -230,7 +267,7 @@ function CharacterSheet({
         <StatCell label="КЗ" value={String(ac)} hint={`без брони, 10 + ${formatModifier(dexMod)} ЛОВ`} />
         <StatCell label="Инициатива" value={formatModifier(initiative)} hint="ЛОВ модификатор" />
         <StatCell label="Скорость" value={`${race?.speed ?? 0} фт`} hint={race?.size === "small" ? "Маленький" : "Средний"} />
-        <StatCell label="Бонус мастерства" value={`+${PROFICIENCY_BONUS}`} hint={`Уровень ${character.level}`} />
+        <StatCell label="Бонус мастерства" value={`+${profBonus}`} hint={`Уровень ${character.level}`} />
       </section>
 
       <div
@@ -259,7 +296,7 @@ function CharacterSheet({
                 const score = finalScores[a];
                 const mod = abilityModifier(score);
                 const isProf = proficientSaves.has(a);
-                const save = mod + (isProf ? PROFICIENCY_BONUS : 0);
+                const save = mod + (isProf ? profBonus : 0);
                 const bonus = character.background_bonuses[a as AbilityCode];
                 return (
                   <tr key={a}>
@@ -297,7 +334,7 @@ function CharacterSheet({
                 const ability = s.ability_code as AbilityCode;
                 const mod = abilityModifier(finalScores[ability]);
                 const isProf = proficientSkills.has(s.code);
-                const total = mod + (isProf ? PROFICIENCY_BONUS : 0);
+                const total = mod + (isProf ? profBonus : 0);
                 return (
                   <tr key={s.code}>
                     <td>
@@ -345,9 +382,26 @@ function CharacterSheet({
           {bg?.description_ru}
         </p>
         <p style={{ fontSize: 13.5, margin: 0 }}>
-          <b>Черта:</b> <span className="muted">{bg?.feat_ru}</span>
+          <b>Черта:</b>{" "}
+          <span className="muted">
+            {refs.feats[bg?.feat_code ?? ""]?.name_ru ?? bg?.feat_code ?? "—"}
+          </span>
         </p>
       </section>
+
+      {subclass && (
+        <section className="card card-compact">
+          <header style={{ marginBottom: 8 }}>
+            <h3 className="card-title">Архетип · {subclass.name_ru}</h3>
+            <p className="card-subtitle">
+              Доступен с {cls?.subclass_start_level ?? 3} уровня класса «{cls?.name_ru ?? ""}».
+            </p>
+          </header>
+          <p className="muted" style={{ fontSize: 13.5, margin: 0 }}>
+            {subclass.description_ru}
+          </p>
+        </section>
+      )}
 
       <section className="card card-compact">
         <header style={{ marginBottom: 8 }}>

@@ -1,14 +1,16 @@
 """Seed/refresh D&D reference tables.
 
-Idempotent: deletes existing rows in the reference tables and re-inserts.
-Run inside the backend container:
+Idempotent UPSERT — existing rows are updated, new ones inserted, and rows in
+the DB that aren't in the seed are deleted only if no character/subclass
+references them. Run inside the backend container:
 
     docker compose exec backend python -m app.scripts.seed_refs
 """
 
 import asyncio
 
-from sqlalchemy import delete
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.data.srd_55 import (
     ABILITIES,
@@ -18,6 +20,7 @@ from app.data.srd_55 import (
     ITEMS,
     RACES,
     SKILLS,
+    SUBCLASSES,
 )
 from app.db.session import AsyncSessionLocal
 from app.models.reference import (
@@ -28,23 +31,31 @@ from app.models.reference import (
     Item,
     Race,
     Skill,
+    Subclass,
 )
+
+
+async def _upsert(db, model, rows: list[dict]) -> None:
+    """INSERT ... ON CONFLICT (code) DO UPDATE — preserves existing rows referenced by FKs."""
+    if not rows:
+        return
+    pk = "code"
+    stmt = pg_insert(model.__table__).values(rows)
+    update_cols = {c: stmt.excluded[c] for c in rows[0].keys() if c != pk}
+    stmt = stmt.on_conflict_do_update(index_elements=[pk], set_=update_cols)
+    await db.execute(stmt)
 
 
 async def seed() -> None:
     async with AsyncSessionLocal() as db:
-        # Order: clear children first if any FK existed; here tables are independent.
-        for model in (Background, CharacterClass, Race, Skill, Ability, Feat, Item):
-            await db.execute(delete(model))
-
-        db.add_all([Ability(**row) for row in ABILITIES])
-        db.add_all([Skill(**row) for row in SKILLS])
-        db.add_all([Race(**row) for row in RACES])
-        db.add_all([Feat(**row) for row in FEATS])
-        db.add_all([Item(**row) for row in ITEMS])
-        db.add_all([CharacterClass(**row) for row in CLASSES])
-        db.add_all([Background(**row) for row in BACKGROUNDS])
-
+        await _upsert(db, Ability, ABILITIES)
+        await _upsert(db, Skill, SKILLS)
+        await _upsert(db, Race, RACES)
+        await _upsert(db, Feat, FEATS)
+        await _upsert(db, Item, ITEMS)
+        await _upsert(db, CharacterClass, CLASSES)
+        await _upsert(db, Subclass, SUBCLASSES)
+        await _upsert(db, Background, BACKGROUNDS)
         await db.commit()
 
     counts = {
@@ -54,9 +65,10 @@ async def seed() -> None:
         "feats": len(FEATS),
         "items": len(ITEMS),
         "classes": len(CLASSES),
+        "subclasses": len(SUBCLASSES),
         "backgrounds": len(BACKGROUNDS),
     }
-    print("Seeded:", counts)
+    print("Seeded (upsert):", counts)
 
 
 if __name__ == "__main__":

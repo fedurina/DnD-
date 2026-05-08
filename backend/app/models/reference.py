@@ -49,6 +49,19 @@ class CharacterClass(Base):
     starting_equipment: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     # Alternative starting gold (in gp), if the player skips the standard set.
     starting_gold_alt: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Level at which the player must pick a subclass (2024: level 3 for all classes).
+    subclass_start_level: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+
+
+class Subclass(Base):
+    __tablename__ = "ref_subclasses"
+
+    code: Mapped[str] = mapped_column(String(48), primary_key=True)
+    class_code: Mapped[str] = mapped_column(
+        String(32), nullable=False, index=True
+    )
+    name_ru: Mapped[str] = mapped_column(String(96), nullable=False)
+    description_ru: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
 
 class Background(Base):

@@ -44,6 +44,7 @@ from app.data.srd_55 import (  # noqa: E402
     ITEMS,
     RACES,
     SKILLS,
+    SUBCLASSES,
 )
 from app.db.base import Base  # noqa: E402
 from app.models.reference import (  # noqa: E402
@@ -54,6 +55,7 @@ from app.models.reference import (  # noqa: E402
     Item,
     Race,
     Skill,
+    Subclass,
 )
 
 # Replace the production engine (lru-cached pool) with a NullPool one so each
@@ -107,6 +109,7 @@ async def setup_database():
         db.add_all([Feat(**r) for r in FEATS])
         db.add_all([Item(**r) for r in ITEMS])
         db.add_all([CharacterClass(**r) for r in CLASSES])
+        db.add_all([Subclass(**r) for r in SUBCLASSES])
         db.add_all([Background(**r) for r in BACKGROUNDS])
         await db.commit()
 

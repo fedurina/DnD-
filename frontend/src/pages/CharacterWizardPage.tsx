@@ -9,11 +9,14 @@ import {
   ALIGNMENT_OPTIONS,
   GENDER_OPTIONS,
   LANGUAGE_OPTIONS,
+  MAX_LEVEL,
   REQUIRED_LANGUAGE_COUNT,
   STANDARD_ARRAY,
   abilityModifier,
   applyBonuses,
   formatModifier,
+  hpAtLevel,
+  proficiencyBonus,
 } from "@/lib/dnd";
 import { byCode } from "@/lib/refs";
 import { useEnsureRefs, useRefsStore } from "@/store/refs";
@@ -36,6 +39,7 @@ import type {
   Item,
   Race,
   Skill,
+  Subclass,
 } from "@/types/reference";
 
 const STEPS = [
@@ -55,6 +59,8 @@ type EquipChoice = "set" | "gold";
 
 interface DraftState {
   class_code: string | null;
+  subclass_code: string | null;
+  level: number;
   background_code: string | null;
   race_code: string | null;
   gender: Gender | null;
@@ -71,6 +77,8 @@ interface DraftState {
 
 const initialDraft: DraftState = {
   class_code: null,
+  subclass_code: null,
+  level: 1,
   background_code: null,
   race_code: null,
   gender: null,
@@ -146,6 +154,8 @@ export default function CharacterWizardPage() {
       .then((c) => {
         setDraft({
           class_code: c.class_code,
+          subclass_code: c.subclass_code,
+          level: c.level,
           background_code: c.background_code,
           race_code: c.race_code,
           gender: c.gender,
@@ -215,12 +225,16 @@ export default function CharacterWizardPage() {
         draft.equip_class,
         draft.equip_bg,
       );
+      const needsSubclass =
+        selectedClass !== null && draft.level >= selectedClass.subclass_start_level;
       const payload: CharacterCreatePayload = {
         name: draft.name.trim(),
         alignment: draft.alignment!,
         gender: draft.gender!,
+        level: draft.level,
         race_code: draft.race_code!,
         class_code: draft.class_code!,
+        subclass_code: needsSubclass ? draft.subclass_code : null,
         background_code: draft.background_code!,
         ability_scores: draft.ability_scores as AbilityScores,
         background_bonuses: draft.background_bonuses,
@@ -298,11 +312,28 @@ export default function CharacterWizardPage() {
           {step === 0 && (
             <ClassStep
               classes={eligibleClasses}
+              subclasses={refs.subclasses}
               abilityByCode={byCode(refs.abilities)}
               value={draft.class_code}
+              level={draft.level}
+              subclassCode={draft.subclass_code}
               onChange={(code) =>
-                update({ class_code: code, chosen_skills: [] })
+                update({
+                  class_code: code,
+                  chosen_skills: [],
+                  subclass_code: null,
+                })
               }
+              onLevelChange={(lvl) => {
+                const cls = refs.classes.find((c) => c.code === draft.class_code);
+                const stillNeedsSub =
+                  cls !== undefined && lvl >= cls.subclass_start_level;
+                update({
+                  level: lvl,
+                  subclass_code: stillNeedsSub ? draft.subclass_code : null,
+                });
+              }}
+              onSubclassChange={(code) => update({ subclass_code: code })}
             />
           )}
           {step === 1 && (
@@ -388,6 +419,7 @@ export default function CharacterWizardPage() {
               race={selectedRace!}
               cls={selectedClass!}
               bg={selectedBackground!}
+              subclasses={refs.subclasses}
               skillByCode={byCode(refs.skills)}
               featByCode={byCode(refs.feats)}
               itemByCode={byCode(refs.items)}
@@ -401,6 +433,7 @@ export default function CharacterWizardPage() {
           race={selectedRace}
           cls={selectedClass}
           bg={selectedBackground}
+          subclasses={refs.subclasses}
         />
       </div>
 
@@ -481,15 +514,31 @@ function Stepper({ step }: { step: number }) {
 
 function ClassStep({
   classes,
+  subclasses,
   abilityByCode,
   value,
+  level,
+  subclassCode,
   onChange,
+  onLevelChange,
+  onSubclassChange,
 }: {
   classes: CharacterClass[];
+  subclasses: Subclass[];
   abilityByCode: Record<string, Ability>;
   value: string | null;
+  level: number;
+  subclassCode: string | null;
   onChange: (code: string) => void;
+  onLevelChange: (level: number) => void;
+  onSubclassChange: (code: string) => void;
 }) {
+  const cls = classes.find((c) => c.code === value) ?? null;
+  const needsSubclass = cls !== null && level >= cls.subclass_start_level;
+  const classSubclasses = cls
+    ? subclasses.filter((s) => s.class_code === cls.code)
+    : [];
+
   return (
     <>
       <h2 className="card-title" style={{ marginBottom: 4 }}>Выберите класс</h2>
@@ -516,11 +565,80 @@ function ClassStep({
               Спасброски:{" "}
               {c.saving_throw_abilities.map((a) => abilityByCode[a]?.name_ru ?? a).join(", ")}
               <br />
-              Выбор навыков: {c.skill_choices_count}
+              Выбор навыков: {c.skill_choices_count} · Архетип с {c.subclass_start_level} ур.
             </div>
           </button>
         ))}
       </div>
+
+      {cls && (
+        <div className="card-section" style={{ marginTop: 24 }}>
+          <h3 className="card-title" style={{ marginBottom: 4 }}>
+            Уровень персонажа
+          </h3>
+          <p className="card-subtitle" style={{ marginBottom: 12 }}>
+            От 1 до {MAX_LEVEL}. Бонус мастерства{" "}
+            <b>+{proficiencyBonus(level)}</b> · хиты{" "}
+            <b>{hpAtLevel(cls.hit_die, 0, level)}</b>{" "}
+            <span className="muted">(без модификатора Телосложения)</span>.
+          </p>
+          <div
+            className="row"
+            style={{ alignItems: "center", gap: 12, flexWrap: "wrap" }}
+          >
+            <input
+              type="range"
+              min={1}
+              max={MAX_LEVEL}
+              value={level}
+              onChange={(e) => onLevelChange(Number(e.target.value))}
+              style={{ flex: "1 1 240px", maxWidth: 360 }}
+            />
+            <input
+              type="number"
+              className="input"
+              min={1}
+              max={MAX_LEVEL}
+              value={level}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                if (Number.isNaN(n)) return;
+                onLevelChange(Math.max(1, Math.min(MAX_LEVEL, n)));
+              }}
+              style={{ width: 96 }}
+            />
+          </div>
+        </div>
+      )}
+
+      {needsSubclass && (
+        <div className="card-section" style={{ marginTop: 24 }}>
+          <h3 className="card-title" style={{ marginBottom: 4 }}>
+            Архетип «{cls!.name_ru}»
+          </h3>
+          <p className="card-subtitle" style={{ marginBottom: 12 }}>
+            На уровне {cls!.subclass_start_level} нужно выбрать специализацию.
+          </p>
+          <div className="select-grid">
+            {classSubclasses.map((s) => (
+              <button
+                key={s.code}
+                type="button"
+                className={`select-card${subclassCode === s.code ? " is-selected" : ""}`}
+                onClick={() => onSubclassChange(s.code)}
+              >
+                <div className="select-card-title">{s.name_ru}</div>
+                <p className="muted" style={{ fontSize: 13, marginBottom: 0 }}>
+                  {s.description_ru}
+                </p>
+              </button>
+            ))}
+            {classSubclasses.length === 0 && (
+              <p className="muted">Архетипы для этого класса пока не добавлены.</p>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -1093,6 +1211,7 @@ function SummaryStep({
   race,
   cls,
   bg,
+  subclasses,
   skillByCode,
   featByCode,
   itemByCode,
@@ -1102,6 +1221,7 @@ function SummaryStep({
   race: Race;
   cls: CharacterClass;
   bg: Background;
+  subclasses: Subclass[];
   skillByCode: Record<string, Skill>;
   featByCode: Record<string, Feat>;
   itemByCode: Record<string, Item>;
@@ -1110,8 +1230,10 @@ function SummaryStep({
   const final = applyBonuses(draft.ability_scores as AbilityScores, draft.background_bonuses);
   const conMod = abilityModifier(final.con);
   const dexMod = abilityModifier(final.dex);
-  const hp = cls.hit_die + conMod;
+  const hp = hpAtLevel(cls.hit_die, conMod, draft.level);
   const ac = 10 + dexMod;
+  const pb = proficiencyBonus(draft.level);
+  const subclass = subclasses.find((s) => s.code === draft.subclass_code) ?? null;
 
   const allSkills = Array.from(
     new Set([...bg.granted_skills, ...draft.chosen_skills]),
@@ -1154,12 +1276,16 @@ function SummaryStep({
           <div className="card-subtitle">Базовые параметры</div>
           <h3 className="card-title">{cls.name_ru} · {race.name_ru}</h3>
           <ul style={{ marginTop: 8, paddingLeft: 18, fontSize: 13.5 }}>
-            <li>Уровень <b>1</b></li>
+            <li>Уровень <b>{draft.level}</b></li>
+            {subclass && <li>Архетип: <b>{subclass.name_ru}</b></li>}
             <li>Пол: <b>{genderName}</b></li>
             <li>Мировоззрение: <b>{alignmentName}</b></li>
-            <li>Хиты на 1 уровне: <b>{hp}</b> <span className="muted">(d{cls.hit_die} + {formatModifier(conMod)} ТЕЛ)</span></li>
+            <li>
+              Хиты на {draft.level} уровне: <b>{hp}</b>{" "}
+              <span className="muted">(d{cls.hit_die} + {formatModifier(conMod)} ТЕЛ)</span>
+            </li>
             <li>КЗ без брони: <b>{ac}</b> <span className="muted">(10 + {formatModifier(dexMod)} ЛОВ)</span></li>
-            <li>Бонус мастерства: <b>+2</b></li>
+            <li>Бонус мастерства: <b>+{pb}</b></li>
             <li>Скорость: <b>{race.speed} фт</b></li>
             <li>Предыстория: <b>{bg.name_ru}</b></li>
           </ul>
@@ -1581,11 +1707,13 @@ function LivePreview({
   race,
   cls,
   bg,
+  subclasses,
 }: {
   draft: DraftState;
   race: Race | null;
   cls: CharacterClass | null;
   bg: Background | null;
+  subclasses: Subclass[];
 }) {
   const allFilled = ABILITY_ORDER.every((a) => draft.ability_scores[a] !== undefined);
   const final = allFilled
@@ -1593,16 +1721,19 @@ function LivePreview({
     : null;
   const conMod = final ? abilityModifier(final.con) : null;
   const dexMod = final ? abilityModifier(final.dex) : null;
-  const hp = final && cls ? cls.hit_die + conMod! : null;
+  const hp = cls ? hpAtLevel(cls.hit_die, conMod ?? 0, draft.level) : null;
   const ac = dexMod !== null ? 10 + dexMod : null;
   const alignmentName = ALIGNMENT_OPTIONS.find((a) => a.code === draft.alignment)?.name_ru;
   const genderName = GENDER_OPTIONS.find((g) => g.code === draft.gender)?.name_ru;
+  const subclassName = subclasses.find((s) => s.code === draft.subclass_code)?.name_ru;
 
   return (
     <aside className="wizard-preview">
       <div className="wizard-preview-title">Текущее состояние</div>
 
       <PreviewRow label="Класс" value={cls?.name_ru} />
+      <PreviewRow label="Уровень" value={String(draft.level)} />
+      <PreviewRow label="Архетип" value={subclassName} />
       <PreviewRow label="Предыстория" value={bg?.name_ru} />
       <PreviewRow label="Раса" value={race?.name_ru} />
       <PreviewRow label="Пол" value={genderName} />
@@ -1630,9 +1761,15 @@ function LivePreview({
       {(hp !== null || ac !== null) && (
         <>
           <div className="wizard-preview-divider" />
-          <PreviewRow label="Хиты (1 ур.)" value={hp !== null ? String(hp) : undefined} />
+          <PreviewRow
+            label={`Хиты (${draft.level} ур.)`}
+            value={hp !== null ? String(hp) : undefined}
+          />
           <PreviewRow label="КЗ без брони" value={ac !== null ? String(ac) : undefined} />
-          <PreviewRow label="Бонус мастерства" value="+2" />
+          <PreviewRow
+            label="Бонус мастерства"
+            value={`+${proficiencyBonus(draft.level)}`}
+          />
           <PreviewRow label="Скорость" value={race ? `${race.speed} фт` : undefined} />
         </>
       )}
@@ -1678,8 +1815,12 @@ function isStepValid(
   bg: Background | null,
 ): boolean {
   switch (step) {
-    case 0:
-      return !!draft.class_code;
+    case 0: {
+      if (!draft.class_code || !cls) return false;
+      if (draft.level < 1 || draft.level > MAX_LEVEL) return false;
+      if (draft.level >= cls.subclass_start_level && !draft.subclass_code) return false;
+      return true;
+    }
     case 1:
       return !!draft.background_code;
     case 2:

@@ -519,3 +519,161 @@ async def test_delete_character(client, player):
 
     r = await client.get(f"/api/v1/characters/{cid}", headers=player["headers"])
     assert r.status_code == 404
+
+
+# --------------------------------------------------- levels & subclasses
+
+
+async def test_create_low_level_does_not_require_subclass(client, player):
+    payload = valid_character_payload(level=2)
+    r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
+    assert r.status_code == 201, r.text
+    assert r.json()["level"] == 2
+    assert r.json()["subclass_code"] is None
+
+
+async def test_create_high_level_requires_subclass(client, player):
+    payload = valid_character_payload(level=3)
+    r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
+    assert r.status_code == 400, r.text
+    assert "архетип" in r.json()["detail"].lower()
+
+
+async def test_create_with_subclass_succeeds(client, player):
+    payload = valid_character_payload(level=3, subclass_code="evocation")
+    r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
+    assert r.status_code == 201, r.text
+    assert r.json()["subclass_code"] == "evocation"
+
+
+async def test_create_rejects_subclass_at_low_level(client, player):
+    payload = valid_character_payload(level=1, subclass_code="evocation")
+    r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
+    assert r.status_code == 400, r.text
+    assert "уровня" in r.json()["detail"].lower()
+
+
+async def test_create_rejects_subclass_for_other_class(client, player):
+    payload = valid_character_payload(
+        level=3, subclass_code="champion"  # fighter's subclass on a wizard
+    )
+    r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
+    assert r.status_code == 400, r.text
+
+
+async def test_create_rejects_unknown_subclass(client, player):
+    payload = valid_character_payload(level=3, subclass_code="ghost_school")
+    r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
+    assert r.status_code == 400
+
+
+async def test_create_rejects_level_out_of_range(client, player):
+    payload = valid_character_payload(level=21)
+    r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
+    assert r.status_code == 422
+
+
+async def test_update_level_up_to_3_requires_subclass(client, player):
+    create = await client.post(
+        "/api/v1/characters", json=valid_character_payload(), headers=player["headers"]
+    )
+    cid = create.json()["id"]
+
+    r = await client.patch(
+        f"/api/v1/characters/{cid}", json={"level": 3}, headers=player["headers"]
+    )
+    assert r.status_code == 400, r.text
+    assert "архетип" in r.json()["detail"].lower()
+
+
+async def test_update_level_with_subclass_succeeds(client, player):
+    create = await client.post(
+        "/api/v1/characters", json=valid_character_payload(), headers=player["headers"]
+    )
+    cid = create.json()["id"]
+
+    r = await client.patch(
+        f"/api/v1/characters/{cid}",
+        json={"level": 3, "subclass_code": "evocation"},
+        headers=player["headers"],
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["level"] == 3
+    assert r.json()["subclass_code"] == "evocation"
+
+
+async def test_update_level_down_clears_subclass(client, player):
+    create = await client.post(
+        "/api/v1/characters",
+        json=valid_character_payload(level=3, subclass_code="evocation"),
+        headers=player["headers"],
+    )
+    cid = create.json()["id"]
+
+    r = await client.patch(
+        f"/api/v1/characters/{cid}", json={"level": 2}, headers=player["headers"]
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["level"] == 2
+    assert r.json()["subclass_code"] is None
+
+
+async def test_update_class_change_resets_subclass(client, player):
+    # Start: level 3 wizard with evocation.
+    create = await client.post(
+        "/api/v1/characters",
+        json=valid_character_payload(level=3, subclass_code="evocation"),
+        headers=player["headers"],
+    )
+    cid = create.json()["id"]
+
+    # Switch to fighter without sending a new subclass — old one (evocation) belonged
+    # to wizard, so it must be cleared, but fighter at level 3 still needs one.
+    r = await client.patch(
+        f"/api/v1/characters/{cid}",
+        json={
+            "class_code": "fighter",
+            "background_code": "soldier",
+            "background_bonuses": {"str": 2, "con": 1},
+            "chosen_skills": ["acrobatics", "perception"],
+            "feats": ["savage_attacker"],
+        },
+        headers=player["headers"],
+    )
+    assert r.status_code == 400, r.text
+    assert "архетип" in r.json()["detail"].lower()
+
+
+async def test_update_class_change_with_new_subclass_succeeds(client, player):
+    create = await client.post(
+        "/api/v1/characters",
+        json=valid_character_payload(level=3, subclass_code="evocation"),
+        headers=player["headers"],
+    )
+    cid = create.json()["id"]
+
+    r = await client.patch(
+        f"/api/v1/characters/{cid}",
+        json={
+            "class_code": "fighter",
+            "subclass_code": "champion",
+            "background_code": "soldier",
+            "background_bonuses": {"str": 2, "con": 1},
+            "chosen_skills": ["acrobatics", "perception"],
+            "feats": ["savage_attacker"],
+        },
+        headers=player["headers"],
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["class_code"] == "fighter"
+    assert r.json()["subclass_code"] == "champion"
+
+
+async def test_subclasses_endpoint_filters_by_class(client, player):
+    r = await client.get(
+        "/api/v1/refs/subclasses?class_code=wizard", headers=player["headers"]
+    )
+    assert r.status_code == 200
+    codes = [s["code"] for s in r.json()]
+    assert "evocation" in codes
+    assert "champion" not in codes

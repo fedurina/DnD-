@@ -11,6 +11,7 @@ from app.models.reference import (
     Item,
     Race,
     Skill,
+    Subclass,
 )
 from app.schemas.reference import (
     AbilityOut,
@@ -20,6 +21,7 @@ from app.schemas.reference import (
     ItemOut,
     RaceOut,
     SkillOut,
+    SubclassOut,
 )
 
 router = APIRouter(prefix="/refs", tags=["references"])
@@ -77,6 +79,18 @@ async def get_background(code: str, db: AsyncSession = Depends(get_db)):
     if obj is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Background not found")
     return obj
+
+
+@router.get("/subclasses", response_model=list[SubclassOut])
+async def list_subclasses(
+    class_code: str | None = None, db: AsyncSession = Depends(get_db)
+):
+    stmt = select(Subclass)
+    if class_code is not None:
+        stmt = stmt.where(Subclass.class_code == class_code)
+    stmt = stmt.order_by(Subclass.name_ru)
+    result = await db.execute(stmt)
+    return result.scalars().all()
 
 
 @router.get("/feats", response_model=list[FeatOut])

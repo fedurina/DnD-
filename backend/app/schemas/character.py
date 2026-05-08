@@ -46,9 +46,11 @@ class CharacterCreate(BaseModel):
     name: Annotated[str, Field(min_length=1, max_length=64)]
     alignment: str = "neutral"
     gender: str
+    level: Annotated[int, Field(ge=1, le=20)] = 1
 
     race_code: str
     class_code: str
+    subclass_code: str | None = None
     background_code: str
 
     ability_scores: dict[str, int]
@@ -137,6 +139,7 @@ class CharacterOut(BaseModel):
 
     race_code: str
     class_code: str
+    subclass_code: str | None
     background_code: str
 
     ability_scores: dict[str, int]
@@ -166,6 +169,7 @@ class CharacterSummary(BaseModel):
     gender: str
     race_code: str
     class_code: str
+    subclass_code: str | None
     background_code: str
     is_archived: bool
     campaigns: list[CharacterCampaignBrief] = []
@@ -176,8 +180,10 @@ class CharacterUpdate(BaseModel):
     name: Annotated[str, Field(min_length=1, max_length=64)] | None = None
     alignment: str | None = None
     gender: str | None = None
+    level: Annotated[int, Field(ge=1, le=20)] | None = None
     race_code: str | None = None
     class_code: str | None = None
+    subclass_code: str | None = None
     background_code: str | None = None
     ability_scores: dict[str, int] | None = None
     background_bonuses: dict[str, int] | None = None

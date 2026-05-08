@@ -7,6 +7,7 @@ import type {
   Item,
   Race,
   Skill,
+  Subclass,
 } from "@/types/reference";
 
 export const refsApi = {
@@ -17,4 +18,5 @@ export const refsApi = {
   backgrounds: () => api.get<Background[]>("/refs/backgrounds"),
   feats: () => api.get<Feat[]>("/refs/feats"),
   items: () => api.get<Item[]>("/refs/items"),
+  subclasses: () => api.get<Subclass[]>("/refs/subclasses"),
 };

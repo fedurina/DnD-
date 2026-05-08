@@ -18,6 +18,7 @@ node_modules/
 dist/
 build/
 .vite/
+*.tsbuildinfo
 
 # Vite PWA dev artifacts
 dev-dist/

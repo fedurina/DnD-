@@ -40,6 +40,14 @@ export interface CharacterClass {
   skill_options: string[];
   starting_equipment: InventoryEntry[];
   starting_gold_alt: number;
+  subclass_start_level: number;
+}
+
+export interface Subclass {
+  code: string;
+  class_code: string;
+  name_ru: string;
+  description_ru: string;
 }
 
 export interface Background {

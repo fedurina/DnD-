@@ -9,6 +9,7 @@ import type {
   Item,
   Race,
   Skill,
+  Subclass,
 } from "@/types/reference";
 
 type Status = "idle" | "loading" | "loaded" | "error";
@@ -21,6 +22,7 @@ interface RefsState {
   backgrounds: Background[];
   feats: Feat[];
   items: Item[];
+  subclasses: Subclass[];
   status: Status;
   error: string | null;
   load: () => Promise<void>;
@@ -34,6 +36,7 @@ export const useRefsStore = create<RefsState>((set, get) => ({
   backgrounds: [],
   feats: [],
   items: [],
+  subclasses: [],
   status: "idle",
   error: null,
   load: async () => {
@@ -41,16 +44,25 @@ export const useRefsStore = create<RefsState>((set, get) => ({
     if (status === "loaded" || status === "loading") return;
     set({ status: "loading", error: null });
     try {
-      const [abilities, skills, races, classes, backgrounds, feats, items] =
-        await Promise.all([
-          refsApi.abilities(),
-          refsApi.skills(),
-          refsApi.races(),
-          refsApi.classes(),
-          refsApi.backgrounds(),
-          refsApi.feats(),
-          refsApi.items(),
-        ]);
+      const [
+        abilities,
+        skills,
+        races,
+        classes,
+        backgrounds,
+        feats,
+        items,
+        subclasses,
+      ] = await Promise.all([
+        refsApi.abilities(),
+        refsApi.skills(),
+        refsApi.races(),
+        refsApi.classes(),
+        refsApi.backgrounds(),
+        refsApi.feats(),
+        refsApi.items(),
+        refsApi.subclasses(),
+      ]);
       set({
         abilities,
         skills,
@@ -59,6 +71,7 @@ export const useRefsStore = create<RefsState>((set, get) => ({
         backgrounds,
         feats,
         items,
+        subclasses,
         status: "loaded",
       });
     } catch (e) {

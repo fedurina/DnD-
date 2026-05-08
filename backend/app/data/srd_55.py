@@ -334,6 +334,7 @@ CLASSES = [
             {"code": "explorers_pack", "qty": 1},
         ],
         "starting_gold_alt": 75,
+        "subclass_start_level": 3,
     },
     {
         "code": "cleric",
@@ -354,6 +355,7 @@ CLASSES = [
             {"code": "priests_pack", "qty": 1},
         ],
         "starting_gold_alt": 110,
+        "subclass_start_level": 3,
     },
     {
         "code": "fighter",
@@ -376,6 +378,7 @@ CLASSES = [
             {"code": "dungeoneers_pack", "qty": 1},
         ],
         "starting_gold_alt": 155,
+        "subclass_start_level": 3,
     },
     {
         "code": "rogue",
@@ -400,6 +403,7 @@ CLASSES = [
             {"code": "burglars_pack", "qty": 1},
         ],
         "starting_gold_alt": 100,
+        "subclass_start_level": 3,
     },
     {
         "code": "wizard",
@@ -420,6 +424,61 @@ CLASSES = [
             {"code": "scholars_pack", "qty": 1},
         ],
         "starting_gold_alt": 55,
+        "subclass_start_level": 3,
+    },
+]
+
+# Subclasses (one per class for MVP). Picked starting at class.subclass_start_level.
+SUBCLASSES = [
+    {
+        "code": "berserker",
+        "class_code": "barbarian",
+        "name_ru": "Берсерк",
+        "description_ru": (
+            "Путь чистой ярости и разрушения. Берсерк может войти в бешенство, "
+            "получая бонусы к урону и сопротивление физическому урону, но рискует "
+            "истощиться от перенапряжения."
+        ),
+    },
+    {
+        "code": "life_domain",
+        "class_code": "cleric",
+        "name_ru": "Домен Жизни",
+        "description_ru": (
+            "Жрецы домена Жизни сосредоточены на положительной энергии, "
+            "исцелении и поддержке союзников. Получают улучшенные заклинания "
+            "лечения и владение тяжёлой бронёй."
+        ),
+    },
+    {
+        "code": "champion",
+        "class_code": "fighter",
+        "name_ru": "Чемпион",
+        "description_ru": (
+            "Идеал физического совершенства. Чемпион полагается на силу, "
+            "стойкость и точность: расширенный диапазон критических попаданий "
+            "и улучшенный атлетизм."
+        ),
+    },
+    {
+        "code": "thief",
+        "class_code": "rogue",
+        "name_ru": "Вор",
+        "description_ru": (
+            "Классический специалист по проникновению и кражам. Вор быстрее "
+            "лазает, использует инструменты бонусным действием и со временем "
+            "получает скорость хитрого ловкача."
+        ),
+    },
+    {
+        "code": "evocation",
+        "class_code": "wizard",
+        "name_ru": "Школа Воплощения",
+        "description_ru": (
+            "Волшебники этой школы создают мощные заклинания урона. Изученное "
+            "Воплощение позволяет щадить союзников при взрывах, а на высоких "
+            "уровнях — добавлять модификатор интеллекта к урону."
+        ),
     },
 ]
 

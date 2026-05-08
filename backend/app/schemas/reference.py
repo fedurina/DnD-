@@ -47,6 +47,14 @@ class ClassOut(_Base):
     skill_options: list[str]
     starting_equipment: list[InventoryEntry]
     starting_gold_alt: int
+    subclass_start_level: int
+
+
+class SubclassOut(_Base):
+    code: str
+    class_code: str
+    name_ru: str
+    description_ru: str
 
 
 class BackgroundOut(_Base):

@@ -5,7 +5,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.campaign import Campaign, CampaignMember
 from app.models.character import Character
-from app.models.reference import Background, CharacterClass, Feat, Item, Race
+from app.models.reference import (
+    Background,
+    CharacterClass,
+    Feat,
+    Item,
+    Race,
+    Subclass,
+)
 from app.models.user import User
 from app.schemas.character import CharacterCreate, CharacterUpdate, InventoryEntry
 
@@ -83,6 +90,36 @@ async def _validate_items(db: AsyncSession, items: list[InventoryEntry]) -> None
         )
 
 
+async def _validate_subclass(
+    db: AsyncSession,
+    *,
+    level: int,
+    cls: CharacterClass,
+    subclass_code: str | None,
+) -> None:
+    """At/above class.subclass_start_level a subclass is required and must belong to the class."""
+    requires = level >= cls.subclass_start_level
+    if requires:
+        if not subclass_code:
+            raise CharacterValidationError(
+                f"На уровне {level} нужно выбрать архетип класса «{cls.name_ru}»"
+            )
+        sub = await db.get(Subclass, subclass_code)
+        if sub is None:
+            raise CharacterValidationError(
+                f"Архетип «{subclass_code}» не найден"
+            )
+        if sub.class_code != cls.code:
+            raise CharacterValidationError(
+                f"Архетип «{sub.name_ru}» не относится к классу «{cls.name_ru}»"
+            )
+    else:
+        if subclass_code:
+            raise CharacterValidationError(
+                f"Архетип выбирается только с уровня {cls.subclass_start_level}"
+            )
+
+
 def _validate_bg_bonus_keys(bonuses: dict[str, int], bg: Background) -> None:
     valid = set(bg.ability_scores)
     invalid = set(bonuses) - valid
@@ -106,14 +143,19 @@ async def create_character(
     _validate_bg_bonus_keys(payload.background_bonuses, bg)
     await _validate_feats(db, payload.feats, bg)
     await _validate_items(db, payload.items)
+    await _validate_subclass(
+        db, level=payload.level, cls=cls, subclass_code=payload.subclass_code
+    )
 
     char = Character(
         user_id=user.id,
         name=payload.name,
         alignment=payload.alignment,
         gender=payload.gender,
+        level=payload.level,
         race_code=payload.race_code,
         class_code=payload.class_code,
+        subclass_code=payload.subclass_code,
         background_code=payload.background_code,
         ability_scores=payload.ability_scores,
         background_bonuses=payload.background_bonuses,
@@ -264,6 +306,7 @@ async def update_character(
     new_skills = (
         payload.chosen_skills if payload.chosen_skills is not None else char.chosen_skills
     )
+    new_level = payload.level if payload.level is not None else char.level
 
     # Validate refs exist.
     race = await db.get(Race, new_race_code)
@@ -275,6 +318,22 @@ async def update_character(
     bg = await db.get(Background, new_bg_code)
     if bg is None:
         raise CharacterValidationError("Предыстория не найдена")
+
+    # Subclass: take from payload if present; else if class changed, drop the previous
+    # one (it belonged to the old class); else inherit current. After computing, drop it
+    # automatically if the new level is below the class's subclass_start_level.
+    class_changed = payload.class_code is not None and new_class_code != char.class_code
+    if payload.subclass_code is not None:
+        new_subclass_code: str | None = payload.subclass_code
+    elif class_changed:
+        new_subclass_code = None
+    else:
+        new_subclass_code = char.subclass_code
+    if new_level < cls.subclass_start_level:
+        new_subclass_code = None
+    await _validate_subclass(
+        db, level=new_level, cls=cls, subclass_code=new_subclass_code
+    )
 
     # Re-run domain validators on the future state.
     _validate_skills(list(new_skills), cls, bg)
@@ -295,9 +354,9 @@ async def update_character(
             raise CharacterValidationError(
                 f"Класс «{cls.name_ru}» не разрешён в кампании «{campaign.name}»"
             )
-        if char.level > campaign.max_level:
+        if new_level > campaign.max_level:
             raise CharacterValidationError(
-                f"Уровень {char.level} превышает лимит {campaign.max_level} "
+                f"Уровень {new_level} превышает лимит {campaign.max_level} "
                 f"в кампании «{campaign.name}»"
             )
 
@@ -331,7 +390,9 @@ async def update_character(
         char.equip_bg_choice = payload.equip_bg_choice
     char.race_code = new_race_code
     char.class_code = new_class_code
+    char.subclass_code = new_subclass_code
     char.background_code = new_bg_code
+    char.level = new_level
     char.ability_scores = dict(new_abilities)
     char.background_bonuses = dict(new_bonuses)
     char.chosen_skills = list(new_skills)

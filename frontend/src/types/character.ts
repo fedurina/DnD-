@@ -24,8 +24,10 @@ export interface CharacterCreatePayload {
   name: string;
   alignment: Alignment;
   gender: Gender;
+  level: number;
   race_code: string;
   class_code: string;
+  subclass_code: string | null;
   background_code: string;
   ability_scores: AbilityScores;
   background_bonuses: Partial<Record<AbilityCode, number>>;
@@ -47,7 +49,6 @@ export interface CharacterCampaignBrief {
 export interface Character extends CharacterCreatePayload {
   id: string;
   user_id: string;
-  level: number;
   is_archived: boolean;
   campaigns: CharacterCampaignBrief[];
   created_at: string;
@@ -61,6 +62,7 @@ export interface CharacterSummary {
   gender: Gender;
   race_code: string;
   class_code: string;
+  subclass_code: string | null;
   background_code: string;
   is_archived: boolean;
   campaigns: CharacterCampaignBrief[];
@@ -71,8 +73,10 @@ export interface CharacterUpdatePayload {
   name?: string;
   alignment?: Alignment;
   gender?: Gender;
+  level?: number;
   race_code?: string;
   class_code?: string;
+  subclass_code?: string | null;
   background_code?: string;
   ability_scores?: AbilityScores;
   background_bonuses?: Partial<Record<AbilityCode, number>>;

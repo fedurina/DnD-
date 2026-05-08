@@ -116,3 +116,22 @@ export function applyBonuses(
   }
   return out;
 }
+
+export const MAX_LEVEL = 20;
+
+// 5.5e proficiency bonus by level: +2 (1-4), +3 (5-8), +4 (9-12), +5 (13-16), +6 (17-20).
+export function proficiencyBonus(level: number): number {
+  return 2 + Math.floor((Math.min(Math.max(level, 1), MAX_LEVEL) - 1) / 4);
+}
+
+// Max-roll HP: hit_die at level 1, then average roll (hit_die/2 + 1) per level.
+// Plus CON modifier for every level. Standard 5.5e calc.
+export function hpAtLevel(
+  hitDie: number,
+  conMod: number,
+  level: number,
+): number {
+  const lvl = Math.min(Math.max(level, 1), MAX_LEVEL);
+  const avgPerLevel = Math.floor(hitDie / 2) + 1;
+  return hitDie + conMod + (lvl - 1) * (avgPerLevel + conMod);
+}

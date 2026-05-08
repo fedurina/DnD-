@@ -11,8 +11,10 @@
     "generate-pwa-assets": "pwa-assets-generator"
   },
   "dependencies": {
+    "@pdf-lib/fontkit": "^1.1.1",
     "@react-three/fiber": "^8.17.10",
     "@shadergradient/react": "^2.0.27",
+    "pdf-lib": "^1.17.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0",

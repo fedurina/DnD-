@@ -32,6 +32,11 @@ class Character(Base):
     class_code: Mapped[str] = mapped_column(
         String(32), ForeignKey("ref_classes.code", ondelete="RESTRICT"), nullable=False
     )
+    subclass_code: Mapped[str | None] = mapped_column(
+        String(48),
+        ForeignKey("ref_subclasses.code", ondelete="RESTRICT"),
+        nullable=True,
+    )
     background_code: Mapped[str] = mapped_column(
         String(32), ForeignKey("ref_backgrounds.code", ondelete="RESTRICT"), nullable=False
     )
