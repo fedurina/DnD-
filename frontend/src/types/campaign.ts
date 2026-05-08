@@ -31,7 +31,7 @@ export interface Campaign {
   master_username: string;
   name: string;
   description: string;
-  invite_code: string; // empty string for non-master viewers
+  invite_code: string; // пустая строка для всех, кроме мастера кампании
   allowed_races: string[];
   allowed_classes: string[];
   max_level: number;

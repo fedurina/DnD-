@@ -25,7 +25,7 @@ async def test_create_rejects_non_standard_array(client, player):
 
 
 async def test_create_rejects_skill_overlap_with_background(client, player):
-    # sage grants arcana + history; choosing arcana again must fail
+    # «sage» даёт arcana + history; выбор arcana ещё раз должен упасть
     payload = valid_character_payload(chosen_skills=["arcana", "history"])
     r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
     assert r.status_code == 400
@@ -46,7 +46,7 @@ async def test_create_rejects_skill_outside_class_options(client, player):
 
 
 async def test_create_rejects_bg_bonus_on_invalid_ability(client, player):
-    # sage allows con/int/wis; str is invalid
+    # «sage» позволяет con/int/wis; str недопустим
     payload = valid_character_payload(background_bonuses={"str": 2, "cha": 1})
     r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
     assert r.status_code == 400
@@ -67,7 +67,7 @@ async def test_create_accepts_1_1_1_distribution(client, player):
 
 
 async def test_create_rejects_missing_origin_feat(client, player):
-    # sage's origin feat is "magic_initiate_wizard" — error message uses Russian name.
+    # изначальная черта «sage» — "magic_initiate_wizard"; в сообщении об ошибке — русское имя.
     payload = valid_character_payload(feats=[])
     r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
     assert r.status_code == 400
@@ -98,16 +98,16 @@ async def test_create_rejects_duplicate_item_code(client, player):
 
 
 async def test_update_revalidates_feats_on_bg_change(client, player):
-    # Create a sage (origin feat: magic_initiate_wizard).
+    # Создаём персонажа с предысторией «sage» (изначальная черта: magic_initiate_wizard).
     create = await client.post(
         "/api/v1/characters", json=valid_character_payload(), headers=player["headers"]
     )
     assert create.status_code == 201, create.text
     cid = create.json()["id"]
 
-    # Switch to criminal (origin feat: alert) without updating feats —
-    # the existing feats list (sage's origin) doesn't satisfy the new bg.
-    # We update bonuses + skills so we don't trip earlier validators.
+    # Переключаемся на «criminal» (изначальная черта: alert), не обновляя список черт —
+    # текущий список (черта от sage) не удовлетворяет новой предыстории.
+    # Бонусы и навыки обновляем заодно, чтобы не упасть на более ранних валидаторах.
     r = await client.patch(
         f"/api/v1/characters/{cid}",
         json={
@@ -117,7 +117,7 @@ async def test_update_revalidates_feats_on_bg_change(client, player):
         headers=player["headers"],
     )
     assert r.status_code == 400, r.text
-    # criminal's origin feat is "alert" → "Бдительный" in Russian
+    # изначальная черта «criminal» — "alert" → «Бдительный» по-русски
     assert "Бдительный" in r.json()["detail"]
 
 
@@ -127,8 +127,8 @@ async def test_update_bg_change_with_matching_feats_succeeds(client, player):
     )
     cid = create.json()["id"]
 
-    # acolyte requires magic_initiate_cleric; criminal requires alert.
-    # Switch bg AND feats together.
+    # «acolyte» требует magic_initiate_cleric; «criminal» — alert.
+    # Меняем предысторию И черты одновременно.
     r = await client.patch(
         f"/api/v1/characters/{cid}",
         json={
@@ -259,15 +259,15 @@ async def test_character_list_marks_needs_attention_per_campaign(client, master,
             headers=master["headers"],
         )
     ).json()
-    # Player joins without character (campaign restriction would block attach with elf).
+    # Игрок присоединяется без персонажа (ограничения кампании заблокировали бы прикрепление эльфа).
     await client.post(
         "/api/v1/campaigns/join",
         json={"invite_code": campaign["invite_code"]},
         headers=player["headers"],
     )
-    # Master tightens — but elf wasn't allowed to begin with, so this is just confirming.
-    # Now player edits campaign restrictions? They can't, only master can.
-    # Let's instead loosen and attach, then tighten.
+    # Мастер ужесточает — но эльф изначально и так не был разрешён, так что это просто подтверждение.
+    # А может игрок сам поменять ограничения кампании? Нет, это может только мастер.
+    # Поэтому сначала ослабляем и прикрепляем, затем ужесточаем.
     await client.patch(
         f"/api/v1/campaigns/{campaign['id']}",
         json={"allowed_races": []},
@@ -278,7 +278,7 @@ async def test_character_list_marks_needs_attention_per_campaign(client, master,
         json={"character_id": char["id"]},
         headers=player["headers"],
     )
-    # Re-tighten — character now mismatches.
+    # Снова ужесточаем — теперь персонаж не подходит.
     await client.patch(
         f"/api/v1/campaigns/{campaign['id']}",
         json={"allowed_races": ["dwarf"]},
@@ -292,7 +292,7 @@ async def test_character_list_marks_needs_attention_per_campaign(client, master,
 
 
 async def test_master_can_view_attached_character(client, master, player):
-    # player creates a character and joins master's campaign with it
+    # игрок создаёт персонажа и присоединяется с ним к кампании мастера
     char = (
         await client.post(
             "/api/v1/characters",
@@ -326,7 +326,7 @@ async def test_owner_can_change_class_with_valid_skills(client, player):
             headers=player["headers"],
         )
     ).json()
-    # Switch wizard → fighter, with fighter's allowed skills.
+    # Переключаем волшебника → воина с допустимыми для воина навыками.
     r = await client.patch(
         f"/api/v1/characters/{char['id']}",
         json={"class_code": "fighter", "chosen_skills": ["acrobatics", "perception"]},
@@ -338,7 +338,7 @@ async def test_owner_can_change_class_with_valid_skills(client, player):
 
 
 async def test_update_rejects_class_change_without_skill_resync(client, player):
-    """Skills from the old class are no longer valid options for the new class."""
+    """Навыки старого класса не подходят как варианты для нового класса."""
     char = (
         await client.post(
             "/api/v1/characters",
@@ -346,7 +346,7 @@ async def test_update_rejects_class_change_without_skill_resync(client, player):
             headers=player["headers"],
         )
     ).json()
-    # wizard's chosen_skills (investigation/religion) are not in fighter's options.
+    # навыки волшебника (investigation/religion) не входят в варианты для воина.
     r = await client.patch(
         f"/api/v1/characters/{char['id']}",
         json={"class_code": "fighter"},
@@ -376,7 +376,7 @@ async def test_update_rejects_class_violating_campaign(client, master, player):
         headers=player["headers"],
     )
 
-    # Try to switch to fighter — campaign forbids non-wizards.
+    # Пытаемся переключиться на воина — кампания запрещает всех, кроме волшебников.
     r = await client.patch(
         f"/api/v1/characters/{char['id']}",
         json={"class_code": "fighter", "chosen_skills": ["acrobatics", "perception"]},
@@ -410,7 +410,7 @@ async def test_master_can_change_class_within_campaign_restrictions(client, mast
         headers=player["headers"],
     )
 
-    # Master switches the character to rogue (allowed) and re-picks rogue skills.
+    # Мастер переключает персонажа на плута (разрешён) и заново выбирает навыки плута.
     r = await client.patch(
         f"/api/v1/characters/{char['id']}",
         json={
@@ -455,7 +455,7 @@ async def test_master_can_edit_attached_character_name(client, master, player):
 
 
 async def test_master_cannot_archive_attached_character(client, master, player):
-    """Archiving stays owner-only even if character is in master's campaign."""
+    """Архивирование остаётся доступно только владельцу, даже если персонаж — в кампании мастера."""
     char = (
         await client.post(
             "/api/v1/characters",
@@ -522,7 +522,7 @@ async def test_delete_character(client, player):
     assert r.status_code == 404
 
 
-# --------------------------------------------------- levels & subclasses
+# --------------------------------------------------- уровни и подклассы
 
 
 async def test_create_low_level_does_not_require_subclass(client, player):
@@ -556,7 +556,7 @@ async def test_create_rejects_subclass_at_low_level(client, player):
 
 async def test_create_rejects_subclass_for_other_class(client, player):
     payload = valid_character_payload(
-        level=3, subclass_code="champion"  # fighter's subclass on a wizard
+        level=3, subclass_code="champion"  # подкласс воина на волшебнике
     )
     r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
     assert r.status_code == 400, r.text
@@ -620,7 +620,7 @@ async def test_update_level_down_clears_subclass(client, player):
 
 
 async def test_update_class_change_resets_subclass(client, player):
-    # Start: level 3 wizard with evocation.
+    # Старт: волшебник 3 уровня с подклассом evocation.
     create = await client.post(
         "/api/v1/characters",
         json=valid_character_payload(level=3, subclass_code="evocation"),
@@ -628,8 +628,8 @@ async def test_update_class_change_resets_subclass(client, player):
     )
     cid = create.json()["id"]
 
-    # Switch to fighter without sending a new subclass — old one (evocation) belonged
-    # to wizard, so it must be cleared, but fighter at level 3 still needs one.
+    # Переключаемся на воина, не присылая новый подкласс — старый (evocation) был
+    # волшебника и должен быть сброшен, но воин на 3-м уровне всё равно требует подкласс.
     r = await client.patch(
         f"/api/v1/characters/{cid}",
         json={

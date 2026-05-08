@@ -32,8 +32,8 @@ class RaceOut(_Base):
 
 
 class InventoryEntry(BaseModel):
-    """Shared inventory line used in character payloads, character responses,
-    and reference responses (class/background starting equipment)."""
+    """Общая запись инвентаря, используется в payload'ах персонажа, ответах по
+    персонажам и ответах справочников (стартовое снаряжение класса/предыстории)."""
 
     code: str
     qty: int = Field(ge=1)

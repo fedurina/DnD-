@@ -6,7 +6,7 @@ from app.db.base import Base
 
 
 class Ability(Base):
-    """The six core ability scores: STR, DEX, CON, INT, WIS, CHA."""
+    """Шесть основных характеристик: СИЛ, ЛОВ, ТЕЛ, ИНТ, МУД, ХАР."""
 
     __tablename__ = "ref_abilities"
 
@@ -47,9 +47,9 @@ class CharacterClass(Base):
     skill_options: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     # [{"code": "leather_armor", "qty": 1}, ...]
     starting_equipment: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    # Alternative starting gold (in gp), if the player skips the standard set.
+    # Альтернативное стартовое золото (в зм), если игрок отказывается от стандартного набора.
     starting_gold_alt: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    # Level at which the player must pick a subclass (2024: level 3 for all classes).
+    # Уровень, с которого игрок обязан выбрать подкласс (2024: уровень 3 для всех классов).
     subclass_start_level: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
 
 
@@ -72,7 +72,7 @@ class Background(Base):
     description_ru: Mapped[str] = mapped_column(Text, nullable=False, default="")
     ability_scores: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     granted_skills: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    # FK-by-convention to ref_feats.code (origin feat granted by background).
+    # FK по соглашению на ref_feats.code (изначальная черта, даваемая предысторией).
     feat_code: Mapped[str] = mapped_column(String(64), nullable=False, default="")
     starting_equipment: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     starting_gold_alt: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -84,7 +84,7 @@ class Feat(Base):
     code: Mapped[str] = mapped_column(String(64), primary_key=True)
     name_ru: Mapped[str] = mapped_column(String(96), nullable=False)
     description_ru: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    # 'origin' | 'general' | 'fighting_style'
+    # 'origin' | 'general' | 'fighting_style' (изначальные / общие / боевые стили)
     category: Mapped[str] = mapped_column(String(24), nullable=False)
     prerequisites_ru: Mapped[str | None] = mapped_column(String(256), nullable=True)
     is_repeatable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -97,6 +97,7 @@ class Item(Base):
     name_ru: Mapped[str] = mapped_column(String(96), nullable=False)
     description_ru: Mapped[str] = mapped_column(Text, nullable=False, default="")
     # 'weapon' | 'armor' | 'ammunition' | 'gear' | 'kit' | 'tool' | 'currency'
+    # (оружие / броня / боеприпас / снаряжение / набор / инструмент / валюта)
     type: Mapped[str] = mapped_column(String(24), nullable=False)
-    # Cost in gold pieces (decimal — so 1 sp = 0.1 gp).
+    # Цена в золотых монетах (десятичное число — 1 см = 0.1 зм).
     cost_gp: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)

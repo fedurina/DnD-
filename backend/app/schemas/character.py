@@ -118,14 +118,14 @@ class CharacterCreate(BaseModel):
             raise ValueError("Each bonus must be 1 or 2")
         if sum(v.values()) != 3:
             raise ValueError("background_bonuses must sum to 3")
-        # Either +1/+1/+1 (3 different abilities) or +2/+1 (2 different abilities).
+        # Либо +1/+1/+1 (3 разные характеристики), либо +2/+1 (2 разные характеристики).
         if sorted(v.values()) not in ([1, 1, 1], [1, 2]):
             raise ValueError("background_bonuses must be +1/+1/+1 or +2/+1")
         return v
 
 
 class CharacterCampaignBrief(BaseModel):
-    """Lightweight reference to a campaign the character is attached to."""
+    """Облегчённая ссылка на кампанию, к которой прикреплён персонаж."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -166,7 +166,7 @@ class CharacterOut(BaseModel):
 
 
 class CharacterSummary(BaseModel):
-    """Lightweight projection for the list view."""
+    """Облегчённая проекция для списочного представления."""
 
     model_config = ConfigDict(from_attributes=True)
 

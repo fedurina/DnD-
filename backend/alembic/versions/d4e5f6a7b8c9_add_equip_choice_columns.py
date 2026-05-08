@@ -1,4 +1,4 @@
-"""add equip_class_choice and equip_bg_choice to characters
+"""добавление equip_class_choice и equip_bg_choice к characters
 
 Revision ID: d4e5f6a7b8c9
 Revises: c3d4e5f6a7b8

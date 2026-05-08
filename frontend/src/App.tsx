@@ -8,11 +8,11 @@ export default function App() {
   const bootstrap = useAuthStore((s) => s.bootstrap);
 
   useEffect(() => {
-    // Drop any leftover tokens from the previous (localStorage-based) auth.
+    // Удаляем остатки токенов от предыдущей версии авторизации (через localStorage).
     try {
       localStorage.removeItem("auth-storage");
     } catch {
-      // ignore
+      // игнорируем
     }
     bootstrap();
   }, [bootstrap]);

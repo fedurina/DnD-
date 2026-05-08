@@ -60,7 +60,7 @@ class CampaignDetail(CampaignOut):
 
 
 class CampaignSummary(BaseModel):
-    """List view: lightweight projection."""
+    """Списочное представление: облегчённая проекция."""
 
     id: uuid.UUID
     master_id: uuid.UUID
@@ -70,8 +70,8 @@ class CampaignSummary(BaseModel):
     is_active: bool
     member_count: int
     my_character_id: uuid.UUID | None = None
-    # For owned campaigns: at least one member's character mismatches restrictions.
-    # For joined campaigns: my own attached character mismatches.
+    # Для своих кампаний: хотя бы у одного участника персонаж не подходит под ограничения.
+    # Для присоединённых кампаний: мой собственный прикреплённый персонаж не подходит.
     needs_attention: bool = False
     created_at: datetime
 

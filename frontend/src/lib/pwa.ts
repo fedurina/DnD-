@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 
 /**
- * Captures the deferred `beforeinstallprompt` event on Chromium-based browsers
- * and exposes a function to trigger the native install dialog.
+ * Перехватывает отложенное событие `beforeinstallprompt` в браузерах на Chromium
+ * и предоставляет функцию для вызова нативного диалога установки.
  *
- * Returns null when the prompt is not available — either because:
- * - the app is already installed (running in standalone mode),
- * - the browser doesn't support PWA installation (Firefox, iOS Safari),
- * - the install criteria haven't been met yet.
+ * Возвращает null, когда диалог недоступен — например, потому что:
+ * - приложение уже установлено (запущено в standalone-режиме),
+ * - браузер не поддерживает установку PWA (Firefox, iOS Safari),
+ * - критерии установки ещё не выполнены.
  */
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;

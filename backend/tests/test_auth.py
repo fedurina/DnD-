@@ -92,7 +92,7 @@ async def test_register_common_password_rejected(client):
             "role": "player",
         },
     )
-    # "password1" is in the banned list (case-insensitive)
+    # «password1» есть в чёрном списке (нечувствительно к регистру)
     assert r.status_code == 422
 
 
@@ -104,7 +104,7 @@ async def test_login_returns_access_token_and_sets_cookie(client, player):
     assert r.status_code == 200
     data = r.json()
     assert "access_token" in data
-    assert "refresh_token" not in data  # refresh now lives in a cookie
+    assert "refresh_token" not in data  # refresh теперь хранится в куке
     assert data["token_type"] == "bearer"
     assert "refresh_token" in r.cookies
 
@@ -136,12 +136,12 @@ async def test_me_with_invalid_token_returns_401(client):
 
 
 async def test_refresh_with_cookie_returns_new_access_token(client, player):
-    # `client` already has the refresh cookie from login during fixture setup.
+    # У `client` уже есть refresh-кука после логина в фикстуре.
     r = await client.post("/api/v1/auth/refresh")
     assert r.status_code == 200
     data = r.json()
     assert "access_token" in data
-    # New access token should be usable.
+    # Новый access-токен должен быть рабочим.
     me = await client.get(
         "/api/v1/auth/me",
         headers={"Authorization": f"Bearer {data['access_token']}"},
@@ -155,15 +155,15 @@ async def test_refresh_without_cookie_returns_401(client):
 
 
 async def test_refresh_rotates_token_old_one_is_revoked(client, player):
-    # Capture the original refresh cookie.
+    # Запоминаем исходную refresh-куку.
     old = client.cookies.get("refresh_token")
     assert old
 
-    # First refresh succeeds; the old cookie's jti gets revoked.
+    # Первый refresh проходит; jti старой куки отзывается.
     r1 = await client.post("/api/v1/auth/refresh")
     assert r1.status_code == 200
 
-    # Re-attach the *old* cookie and call refresh again — should fail.
+    # Подсовываем *старую* куку и снова дёргаем refresh — должен упасть.
     client.cookies.clear()
     client.cookies.set("refresh_token", old, domain="test", path="/api/v1/auth")
     r2 = await client.post("/api/v1/auth/refresh")
@@ -171,10 +171,10 @@ async def test_refresh_rotates_token_old_one_is_revoked(client, player):
 
 
 async def test_logout_revokes_refresh_cookie(client, player):
-    # Logout clears the cookie and revokes server-side state.
+    # Logout очищает куку и отзывает серверное состояние.
     r = await client.post("/api/v1/auth/logout")
     assert r.status_code == 204
 
-    # The same client now has no usable refresh cookie.
+    # У того же клиента больше нет рабочей refresh-куки.
     r = await client.post("/api/v1/auth/refresh")
     assert r.status_code == 401

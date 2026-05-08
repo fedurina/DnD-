@@ -5,8 +5,8 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.models.user import UserRole
 
-# Most-common leaked passwords. Tiny embedded list — for serious deployments swap
-# for a proper check (e.g. zxcvbn or HIBP API).
+# Самые распространённые утёкшие пароли. Маленький встроенный список — для
+# серьёзных деплоев замените на полноценную проверку (например, zxcvbn или HIBP API).
 _BANNED_PASSWORDS = {
     "password", "password1", "qwerty123", "12345678", "123456789",
     "qwertyui", "11111111", "00000000", "iloveyou", "letmein1",

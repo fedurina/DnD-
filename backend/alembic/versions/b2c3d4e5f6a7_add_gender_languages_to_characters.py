@@ -1,13 +1,14 @@
-"""add gender and languages to characters
+"""добавление gender и languages к characters
 
 Revision ID: b2c3d4e5f6a7
 Revises: a1b2c3d4e5f6
 Create Date: 2026-05-07 12:00:00.000000
 
-Non-destructive: backfills existing rows via server_default, then drops the
-default so future inserts must supply a value (matching the model). Pre-2024
-characters get sentinel defaults (gender=female, ["common", "elvish", "draconic"])
-that are valid per current Pydantic rules; players can edit them via the wizard.
+Неразрушающая миграция: бэкфиллит существующие строки через server_default, затем
+сбрасывает default, чтобы будущие INSERT-ы обязательно указывали значение (как в
+модели). Персонажи, созданные до 2024-х правил, получают sentinel-дефолты
+(gender=female, ["common", "elvish", "draconic"]), которые валидны по текущим
+правилам Pydantic; игроки потом могут поправить их в визарде.
 """
 from typing import Sequence, Union
 

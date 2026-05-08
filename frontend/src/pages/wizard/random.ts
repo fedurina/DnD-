@@ -47,31 +47,31 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 /**
- * Distribute Standard Array (15, 14, 13, 12, 10, 8) over the six abilities,
- * favoring the class's primary abilities (15 first, 14 second), then its
- * saving-throw abilities, then the rest in random order.
+ * Раскладывает Standard Array (15, 14, 13, 12, 10, 8) по шести характеристикам:
+ * сначала отдаёт значения основным характеристикам класса (15 — первой, 14 —
+ * второй), затем характеристикам спасбросков, затем остальным в случайном порядке.
  */
 function pickAbilityScores(cls: CharacterClass): AbilityScores {
   const values = [...STANDARD_ARRAY].sort((a, b) => b - a); // [15,14,13,12,10,8]
   const order: AbilityCode[] = [];
   const used = new Set<AbilityCode>();
 
-  // Class primary abilities first.
+  // Сначала — основные характеристики класса.
   for (const a of cls.primary_abilities as AbilityCode[]) {
     if (!used.has(a)) {
       order.push(a);
       used.add(a);
     }
   }
-  // Then saving-throw abilities.
+  // Затем — характеристики спасбросков класса.
   for (const a of cls.saving_throw_abilities as AbilityCode[]) {
     if (!used.has(a)) {
       order.push(a);
       used.add(a);
     }
   }
-  // Remaining in shuffled order so two characters of the same class don't
-  // produce identical low-stat layouts every time.
+  // Остальные — в перемешанном порядке, чтобы у двух персонажей одного класса
+  // не получались каждый раз одинаковые расклады низких характеристик.
   const rest = shuffle(ABILITY_ORDER.filter((a) => !used.has(a)));
   for (const a of rest) order.push(a);
 
@@ -83,9 +83,9 @@ function pickAbilityScores(cls: CharacterClass): AbilityScores {
 }
 
 /**
- * Pick background bonuses. Mode is random (1+1+1 or 2+1). For 2+1, the +2
- * lands on the ability that's most important for the class (intersection of
- * bg's allowed abilities with class primaries; falls back to a random one).
+ * Выбирает бонусы предыстории. Режим случайный (1+1+1 или 2+1). При 2+1 +2
+ * уходит на ту характеристику, которая важнее для класса (пересечение
+ * допустимых для bg характеристик с основными у класса; иначе — случайная).
  */
 function pickBackgroundBonuses(
   bg: Background,
@@ -93,7 +93,7 @@ function pickBackgroundBonuses(
 ): Partial<Record<AbilityCode, number>> {
   const allowed = bg.ability_scores as AbilityCode[];
   if (Math.random() < 0.5) {
-    // 1+1+1 — must hit all three of bg's abilities.
+    // 1+1+1 — должны попасть во все три характеристики предыстории.
     const out: Partial<Record<AbilityCode, number>> = {};
     for (const a of allowed) out[a] = 1;
     return out;
@@ -107,14 +107,14 @@ function pickBackgroundBonuses(
   return { [twoAb]: 2, [oneAb]: 1 };
 }
 
-/** Pick `cls.skill_choices_count` skills not already granted by the background. */
+/** Выбирает `cls.skill_choices_count` навыков, которых ещё не дала предыстория. */
 function pickSkills(cls: CharacterClass, bg: Background): string[] {
   const granted = new Set(bg.granted_skills);
   const available = cls.skill_options.filter((s) => !granted.has(s));
   return shuffle(available).slice(0, cls.skill_choices_count);
 }
 
-/** Common + 2 random non-common languages. */
+/** Общий + 2 случайных необщих языка. */
 function pickLanguages(): LanguageCode[] {
   const others = LANGUAGE_OPTIONS.map((l) => l.code).filter(
     (c) => c !== "common",
@@ -133,10 +133,10 @@ function pickSubclass(
 }
 
 /**
- * Background's origin feat (mandatory) + one extra random origin feat (for
- * variety so re-rolls don't always show the same single feat). General feats
- * have level-4 prerequisites and fighting-style feats are class-gated, so we
- * stick to the prereq-free origin pool.
+ * Изначальная черта предыстории (обязательная) + одна дополнительная случайная
+ * изначальная черта (для разнообразия, чтобы при перебросах не выпадала одна и
+ * та же единственная черта). Общие черты требуют 4-го уровня, а черты боевых
+ * стилей привязаны к классу, поэтому остаёмся в пуле изначальных без требований.
  */
 function pickFeats(bg: Background, allFeats: Feat[]): string[] {
   const result: string[] = [];
@@ -152,8 +152,8 @@ function pickFeats(bg: Background, allFeats: Feat[]): string[] {
 }
 
 /**
- * Generate a complete random character draft. Guaranteed to satisfy every
- * step's `isStepValid` and the backend's Pydantic validators.
+ * Генерирует полный случайный черновик персонажа. Гарантированно проходит
+ * `isStepValid` каждого шага и Pydantic-валидаторы на бэке.
  */
 export function randomDraft(refs: RandomDraftRefs): DraftState {
   if (refs.classes.length === 0 || refs.races.length === 0 || refs.backgrounds.length === 0) {
@@ -165,7 +165,7 @@ export function randomDraft(refs: RandomDraftRefs): DraftState {
   const bg = pick(refs.backgrounds);
   const gender = pick(GENDERS);
   const alignment = pick(ALIGNMENTS);
-  const level = 1; // MVP: fixed.
+  const level = 1; // MVP: фиксированный.
 
   const ability_scores = pickAbilityScores(cls);
   const background_bonuses = pickBackgroundBonuses(bg, cls);
@@ -186,8 +186,8 @@ export function randomDraft(refs: RandomDraftRefs): DraftState {
     background_bonuses,
     chosen_skills,
     feats: pickFeats(bg, refs.feats),
-    // Each source independently rolls "set" (take the items) or "gold"
-    // (take the alt starting gold). Gives variety in inventory + wallet.
+    // Каждый источник независимо выбирает «set» (взять предметы) или «gold»
+    // (взять альтернативное стартовое золото). Даёт разнообразие инвентаря и кошелька.
     equip_class: Math.random() < 0.5 ? "set" : "gold",
     equip_bg: Math.random() < 0.5 ? "set" : "gold",
     name: randomName(race.code, gender),

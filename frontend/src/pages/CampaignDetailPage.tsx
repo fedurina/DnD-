@@ -61,7 +61,7 @@ export default function CampaignDetailPage() {
     try {
       await navigator.clipboard.writeText(campaign.invite_code);
     } catch {
-      // ignore
+      // игнорируем
     }
   };
 

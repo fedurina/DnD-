@@ -7,8 +7,8 @@ class LoginRequest(BaseModel):
 
 
 class AccessToken(BaseModel):
-    """Login and refresh both return only an access token in the body —
-    refresh token travels in an httpOnly cookie."""
+    """Login и refresh оба возвращают в теле только access-токен —
+    refresh-токен передаётся в httpOnly-куке."""
 
     access_token: str
     token_type: str = "bearer"

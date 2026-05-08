@@ -214,7 +214,7 @@ export default function CharacterDetailPage() {
   );
 }
 
-/* ---------------- Sheet ---------------- */
+/* ---------------- Лист персонажа ---------------- */
 
 function CharacterSheet({
   character,

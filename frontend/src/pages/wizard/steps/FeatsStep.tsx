@@ -33,7 +33,7 @@ export function FeatsStep({
   const active = feats.find((f) => f.code === activeCode) ?? null;
 
   const toggle = (code: string) => {
-    if (code === bg.feat_code) return; // origin feat is locked
+    if (code === bg.feat_code) return; // изначальная черта заблокирована
     if (value.includes(code)) onChange(value.filter((c) => c !== code));
     else onChange([...value, code]);
   };

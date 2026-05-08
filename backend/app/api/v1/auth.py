@@ -131,7 +131,7 @@ async def refresh(
             detail="Недействительный refresh-токен",
         )
 
-    # Rotate: revoke old jti, issue a fresh refresh token + new access.
+    # Ротация: отзываем старый jti, выпускаем свежий refresh-токен + новый access.
     await refresh_token_service.revoke(db, jti)
     await _issue_refresh(db, response, user, request.headers.get("user-agent"))
     return AccessToken(access_token=create_access_token(str(user.id)))

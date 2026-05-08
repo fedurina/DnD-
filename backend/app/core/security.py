@@ -35,7 +35,7 @@ def create_access_token(subject: str) -> str:
 
 
 def create_refresh_token(subject: str) -> tuple[str, uuid.UUID, datetime]:
-    """Returns (encoded_jwt, jti, expires_at) so the caller can persist a row."""
+    """Возвращает (encoded_jwt, jti, expires_at), чтобы вызывающий мог сохранить запись."""
     now = datetime.now(timezone.utc)
     jti = uuid.uuid4()
     exp = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)

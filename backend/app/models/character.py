@@ -41,21 +41,21 @@ class Character(Base):
         String(32), ForeignKey("ref_backgrounds.code", ondelete="RESTRICT"), nullable=False
     )
 
-    # Standard Array values keyed by ability code (str/dex/con/int/wis/cha)
+    # Значения Standard Array, ключи — коды характеристик (str/dex/con/int/wis/cha).
     ability_scores: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    # Subset of background.ability_scores: e.g. {"str": 2, "con": 1}
+    # Подмножество background.ability_scores, например {"str": 2, "con": 1}.
     background_bonuses: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    # Skills picked from class.skill_options (background skills are auto, not stored here)
+    # Навыки, выбранные из class.skill_options (навыки от предыстории идут автоматом и здесь не хранятся).
     chosen_skills: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    # Language codes (e.g. ["common", "elvish", "draconic"]). Common is always included.
+    # Коды языков (например, ["common", "elvish", "draconic"]). Common всегда в списке.
     languages: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    # Feat codes (origin feat from background is always included).
+    # Коды черт (изначальная черта от предыстории всегда в списке).
     feats: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    # Inventory snapshot at creation: [{"code": "leather_armor", "qty": 1}, ...]
+    # Снимок инвентаря на момент создания: [{"code": "leather_armor", "qty": 1}, ...]
     items: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    # Gold pieces.
+    # Золотые монеты.
     gold: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    # Equipment choice flags ("set" or "gold") — drive how items/gold are derived.
+    # Флаги выбора снаряжения ("set" или "gold") — определяют, как считаются предметы и золото.
     equip_class_choice: Mapped[str] = mapped_column(String(8), nullable=False, default="set")
     equip_bg_choice: Mapped[str] = mapped_column(String(8), nullable=False, default="set")
 

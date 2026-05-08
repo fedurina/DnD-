@@ -3,7 +3,7 @@ import type { Background, CharacterClass, InventoryEntry } from "@/types/referen
 
 import type { DraftState, EquipChoice } from "./types";
 
-/** Merge two inventory lists, summing qty for duplicate codes. */
+/** Объединяет два списка инвентаря, суммируя qty для одинаковых кодов. */
 export function mergeInventory(
   a: InventoryEntry[],
   b: InventoryEntry[],
@@ -15,7 +15,7 @@ export function mergeInventory(
   return Array.from(map, ([code, qty]) => ({ code, qty }));
 }
 
-/** Compute final items + gold from class/bg + per-source choices. */
+/** Считает итоговые предметы и золото исходя из класса/предыстории и выбора по каждому источнику. */
 export function computeEquipment(
   cls: CharacterClass | null,
   bg: Background | null,
@@ -32,7 +32,7 @@ export function computeEquipment(
   };
 }
 
-/** Per-step validation. Mirrors the order of `STEPS`. */
+/** Валидация по шагам. Порядок повторяет `STEPS`. */
 export function isStepValid(
   step: number,
   draft: DraftState,

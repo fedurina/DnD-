@@ -59,7 +59,7 @@ export async function apiRequest<T = unknown>(
     try {
       data = await response.json();
     } catch {
-      // ignore
+      // игнорируем
     }
     const message =
       (data as { detail?: string })?.detail ?? `Request failed: ${response.status}`;

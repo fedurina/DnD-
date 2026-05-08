@@ -84,8 +84,8 @@ export const useRefsStore = create<RefsState>((set, get) => ({
 }));
 
 /**
- * Triggers a one-shot load of D&D reference data on mount.
- * Returns the current load status so callers can render fallbacks.
+ * Один раз триггерит загрузку справочников D&D при монтировании.
+ * Возвращает текущий статус загрузки, чтобы вызывающий мог показать заглушку.
  */
 export function useEnsureRefs(): Status {
   const status = useRefsStore((s) => s.status);

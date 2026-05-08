@@ -1,7 +1,7 @@
-"""MVP seed data for D&D 5.5e (2024).
+"""MVP-сид для D&D 5.5e (2024).
 
-Subset only — extend later. Identifiers are English codes used as PKs;
-display names/descriptions are in Russian.
+Только подмножество — расширяется позднее. Идентификаторы — английские
+коды в качестве PK; отображаемые имена/описания — на русском.
 """
 
 ABILITIES = [
@@ -99,9 +99,9 @@ RACES = [
     },
 ]
 
-# Items first (referenced by classes/backgrounds via code).
+# Сначала предметы (на них ссылаются классы/предыстории по code).
 ITEMS = [
-    # Weapons
+    # Оружие
     {"code": "dagger", "name_ru": "Кинжал", "description_ru": "Лёгкое колющее оружие ближнего боя.", "type": "weapon", "cost_gp": 2},
     {"code": "shortsword", "name_ru": "Короткий меч", "description_ru": "Лёгкое колющее оружие ближнего боя.", "type": "weapon", "cost_gp": 10},
     {"code": "rapier", "name_ru": "Рапира", "description_ru": "Колющее оружие ближнего боя средней руки.", "type": "weapon", "cost_gp": 25},
@@ -113,22 +113,22 @@ ITEMS = [
     {"code": "shortbow", "name_ru": "Короткий лук", "description_ru": "Лёгкое дальнобойное оружие.", "type": "weapon", "cost_gp": 25},
     {"code": "light_crossbow", "name_ru": "Лёгкий арбалет", "description_ru": "Дальнобойное оружие, заряжается рукой.", "type": "weapon", "cost_gp": 25},
     {"code": "javelin", "name_ru": "Метательное копьё", "description_ru": "Лёгкое метательное оружие.", "type": "weapon", "cost_gp": 0.5},
-    # Ammunition
+    # Боеприпасы
     {"code": "arrow", "name_ru": "Стрела", "description_ru": "Боеприпасы для лука.", "type": "ammunition", "cost_gp": 0.05},
     {"code": "bolt", "name_ru": "Болт", "description_ru": "Боеприпасы для арбалета.", "type": "ammunition", "cost_gp": 0.05},
-    # Armor
+    # Броня
     {"code": "leather_armor", "name_ru": "Кожаный доспех", "description_ru": "Лёгкий доспех, КД 11 + мод. Ловкости.", "type": "armor", "cost_gp": 10},
     {"code": "scale_mail", "name_ru": "Чешуйчатый доспех", "description_ru": "Средний доспех, КД 14 + мод. Ловкости (макс. 2).", "type": "armor", "cost_gp": 50},
     {"code": "chain_mail", "name_ru": "Кольчуга", "description_ru": "Тяжёлый доспех, КД 16. Помехи скрытности.", "type": "armor", "cost_gp": 75},
     {"code": "shield", "name_ru": "Щит", "description_ru": "+2 к КД, занимает руку.", "type": "armor", "cost_gp": 10},
-    # Kits / Packs
+    # Наборы / Сумки
     {"code": "explorers_pack", "name_ru": "Набор путешественника", "description_ru": "Рюкзак, спальник, рацион и прочие походные принадлежности.", "type": "kit", "cost_gp": 10},
     {"code": "scholars_pack", "name_ru": "Набор учёного", "description_ru": "Книга знаний, чернила, перо, пергамент, мешочек с песком.", "type": "kit", "cost_gp": 40},
     {"code": "dungeoneers_pack", "name_ru": "Набор подземельщика", "description_ru": "Лом, молоток, факелы, верёвка и трутница.", "type": "kit", "cost_gp": 12},
     {"code": "priests_pack", "name_ru": "Набор жреца", "description_ru": "Чаша для подаяния, ладан, облачение, свечи.", "type": "kit", "cost_gp": 19},
     {"code": "burglars_pack", "name_ru": "Набор взломщика", "description_ru": "Воровские инструменты, ломик, мешочек с шариками.", "type": "kit", "cost_gp": 16},
     {"code": "entertainers_pack", "name_ru": "Набор артиста", "description_ru": "Костюм, грим, две марионетки.", "type": "kit", "cost_gp": 40},
-    # Tools / Foci
+    # Инструменты / Фокусы
     {"code": "thieves_tools", "name_ru": "Воровские инструменты", "description_ru": "Отмычки, щупы, ножницы для взлома.", "type": "tool", "cost_gp": 25},
     {"code": "holy_symbol", "name_ru": "Священный символ", "description_ru": "Эмблема веры, фокусирует божественную магию.", "type": "tool", "cost_gp": 5},
     {"code": "arcane_focus", "name_ru": "Магический фокус", "description_ru": "Кристалл, жезл или посох — фокусирует тайную магию.", "type": "tool", "cost_gp": 10},
@@ -138,9 +138,9 @@ ITEMS = [
     {"code": "healers_kit", "name_ru": "Набор целителя", "description_ru": "10 применений: стабилизирует умирающее существо.", "type": "tool", "cost_gp": 5},
 ]
 
-# Origin feats granted by backgrounds (one-to-one), plus a few general feats and fighting styles for browsing.
+# Изначальные черты, даваемые предысториями (один к одному), плюс несколько общих черт и боевых стилей для просмотра.
 FEATS = [
-    # ---- Origin feats (granted by backgrounds) ----
+    # ---- Изначальные черты (даются предысториями) ----
     {
         "code": "magic_initiate_wizard",
         "name_ru": "Магический инициат (Волшебник)",
@@ -222,7 +222,7 @@ FEATS = [
         "is_repeatable": False,
     },
 
-    # ---- General feats (level 4+) ----
+    # ---- Общие черты (с 4-го уровня) ----
     {
         "code": "ability_score_improvement",
         "name_ru": "Улучшение характеристики",
@@ -264,7 +264,7 @@ FEATS = [
         "is_repeatable": False,
     },
 
-    # ---- Fighting styles ----
+    # ---- Боевые стили ----
     {
         "code": "fs_defense",
         "name_ru": "Боевой стиль: Защита",
@@ -428,7 +428,7 @@ CLASSES = [
     },
 ]
 
-# Subclasses (one per class for MVP). Picked starting at class.subclass_start_level.
+# Подклассы (по одному на класс в MVP). Выбираются с уровня class.subclass_start_level.
 SUBCLASSES = [
     {
         "code": "berserker",
@@ -482,7 +482,7 @@ SUBCLASSES = [
     },
 ]
 
-# 2024-rules backgrounds: 3 ability bonuses (+2/+1 or +1/+1/+1), 2 skills, 1 origin feat.
+# Предыстории по правилам 2024: 3 бонуса к характеристикам (+2/+1 или +1/+1/+1), 2 навыка, 1 изначальная черта.
 BACKGROUNDS = [
     {
         "code": "acolyte",

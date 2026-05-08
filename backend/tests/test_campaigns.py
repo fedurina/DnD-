@@ -31,7 +31,7 @@ async def test_player_cannot_create_campaign(client, player):
         json={"name": "Моя игра"},
         headers=player["headers"],
     )
-    # Pydantic min_length=3 passes, then service raises CampaignPermissionError
+    # Pydantic min_length=3 проходит, затем сервис бросает CampaignPermissionError
     assert r.status_code == 403
 
 
@@ -92,7 +92,7 @@ async def test_attach_blocked_by_race_restriction(client, master, player):
     campaign = await _make_campaign(
         client, master["headers"], allowed_races=["human", "halfling"]
     )
-    # elf wizard from default factory — not allowed
+    # эльф-волшебник из дефолтной фабрики — не разрешён
     char = await _make_character(client, player["headers"])
 
     await client.post(
@@ -114,7 +114,7 @@ async def test_attach_blocked_by_class_restriction(client, master, player):
     campaign = await _make_campaign(
         client, master["headers"], allowed_classes=["fighter", "rogue"]
     )
-    char = await _make_character(client, player["headers"])  # wizard
+    char = await _make_character(client, player["headers"])  # волшебник
 
     await client.post(
         "/api/v1/campaigns/join",
@@ -175,7 +175,7 @@ async def test_regenerate_invite_invalidates_old(client, master, player):
     new_code = r.json()["invite_code"]
     assert new_code != old_code
 
-    # Old code rejected
+    # Старый код больше не принимается
     r = await client.post(
         "/api/v1/campaigns/join",
         json={"invite_code": old_code},
@@ -223,22 +223,22 @@ async def test_player_cannot_kick(client, master, player, player2):
 
 
 async def test_tightening_marks_existing_members_for_attention(client, master, player):
-    # Open campaign, alice joins with elf wizard
-    campaign = await _make_campaign(client, master["headers"])  # no restrictions
-    char = await _make_character(client, player["headers"])  # elf wizard from factory
+    # Открытая кампания, alice присоединяется с эльфом-волшебником
+    campaign = await _make_campaign(client, master["headers"])  # без ограничений
+    char = await _make_character(client, player["headers"])  # эльф-волшебник из фабрики
     await client.post(
         "/api/v1/campaigns/join",
         json={"invite_code": campaign["invite_code"], "character_id": char["id"]},
         headers=player["headers"],
     )
 
-    # Initially nothing requires attention
+    # Изначально внимания ничего не требует
     detail = (
         await client.get(f"/api/v1/campaigns/{campaign['id']}", headers=master["headers"])
     ).json()
     assert detail["members"][0]["needs_attention"] is False
 
-    # Master tightens to dwarves only — alice's elf no longer fits
+    # Мастер ужесточает до «только дварфы» — эльф alice больше не подходит
     r = await client.patch(
         f"/api/v1/campaigns/{campaign['id']}",
         json={"allowed_races": ["dwarf"]},
@@ -251,11 +251,11 @@ async def test_tightening_marks_existing_members_for_attention(client, master, p
     ).json()
     assert detail["members"][0]["needs_attention"] is True
 
-    # Player sees needs_attention on their joined-summary
+    # Игрок видит needs_attention в своей сводке присоединённых
     summary = (await client.get("/api/v1/campaigns", headers=player["headers"])).json()
     assert summary["joined"][0]["needs_attention"] is True
 
-    # Master sees needs_attention on their owned-summary
+    # Мастер видит needs_attention в своей сводке собственных кампаний
     summary = (await client.get("/api/v1/campaigns", headers=master["headers"])).json()
     assert summary["owned"][0]["needs_attention"] is True
 
@@ -264,24 +264,24 @@ async def test_loosening_clears_attention(client, master, player):
     campaign = await _make_campaign(
         client, master["headers"], allowed_classes=["fighter"]
     )
-    # Player joins without character (not blocked); their characters won't match initially.
+    # Игрок присоединяется без персонажа (не блокируется); его персонажи изначально не подойдут.
     await client.post(
         "/api/v1/campaigns/join",
         json={"invite_code": campaign["invite_code"]},
         headers=player["headers"],
     )
-    # No attached character → not "needs attention".
+    # Прикреплённого персонажа нет → внимания не требует.
     detail = (
         await client.get(f"/api/v1/campaigns/{campaign['id']}", headers=master["headers"])
     ).json()
     assert detail["members"][0]["needs_attention"] is False
-    # Loosen by adding wizard, then attach a wizard.
+    # Ослабляем, добавляя волшебника, затем прикрепляем волшебника.
     await client.patch(
         f"/api/v1/campaigns/{campaign['id']}",
         json={"allowed_classes": ["fighter", "wizard"]},
         headers=master["headers"],
     )
-    char = await _make_character(client, player["headers"])  # wizard
+    char = await _make_character(client, player["headers"])  # волшебник
     r = await client.patch(
         f"/api/v1/campaigns/{campaign['id']}/character",
         json={"character_id": char["id"]},
@@ -296,13 +296,13 @@ async def test_loosening_clears_attention(client, master, player):
 
 async def test_lowering_max_level_marks_attention(client, master, player):
     campaign = await _make_campaign(client, master["headers"])
-    char = await _make_character(client, player["headers"])  # level 1
+    char = await _make_character(client, player["headers"])  # уровень 1
     await client.post(
         "/api/v1/campaigns/join",
         json={"invite_code": campaign["invite_code"], "character_id": char["id"]},
         headers=player["headers"],
     )
-    # Max level 1 — character is exactly at the boundary, OK
+    # max_level=1 — персонаж ровно на границе, всё ок
     await client.patch(
         f"/api/v1/campaigns/{campaign['id']}",
         json={"max_level": 1},
@@ -312,9 +312,9 @@ async def test_lowering_max_level_marks_attention(client, master, player):
         await client.get(f"/api/v1/campaigns/{campaign['id']}", headers=master["headers"])
     ).json()
     assert detail["members"][0]["needs_attention"] is False
-    # Setting max_level to 0 makes any level-1 character mismatch (edge synthetic case).
-    # max_level has Pydantic constraint ge=1, so 0 won't pass schema validation.
-    # Instead simulate by raising character level via direct DB? Skip — covered by other paths.
+    # max_level=0 сделал бы любого персонажа 1 уровня неподходящим (синтетический пограничный случай).
+    # У max_level есть pydantic-ограничение ge=1, так что 0 не пройдёт валидацию схемы.
+    # Можно было бы поднять уровень персонажа напрямую через БД, но пропускаем — покрывается другими тестами.
 
 
 async def test_lists_separate_owned_and_joined(client, master, player):

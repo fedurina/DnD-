@@ -1,4 +1,4 @@
-"""add subclasses table, subclass_start_level on classes, subclass_code on characters
+"""добавление таблицы subclasses, subclass_start_level в classes, subclass_code в characters
 
 Revision ID: e5f6a7b8c9d0
 Revises: d4e5f6a7b8c9

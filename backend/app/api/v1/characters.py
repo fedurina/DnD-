@@ -20,8 +20,8 @@ router = APIRouter(prefix="/characters", tags=["characters"])
 
 
 async def _attach_campaigns(db: AsyncSession, characters: list[Character]) -> None:
-    """Mutate each character with a `.campaigns` attribute (list of dicts) so
-    response_model=CharacterOut/Summary can serialize it via from_attributes."""
+    """Дописывает каждому персонажу атрибут `.campaigns` (список словарей),
+    чтобы response_model=CharacterOut/Summary мог сериализовать его через from_attributes."""
     if not characters:
         return
     campaigns_map = await character_service.get_attached_campaigns_map(db, characters)

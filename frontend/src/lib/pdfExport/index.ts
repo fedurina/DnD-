@@ -59,12 +59,12 @@ export async function exportCharacterPdf(
   const cyrFont = await doc.embedFont(fontBytes, { subset: true });
 
   const form = doc.getForm();
-  // Make Cyrillic the form's default appearance font so viewers don't break
-  // on Russian glyphs when they re-render appearances themselves.
+  // Делаем кириллический шрифт default appearance у формы, чтобы просмотрщики
+  // не ломались на русских глифах, когда сами пересчитывают внешний вид полей.
   try {
     form.updateFieldAppearances(cyrFont);
   } catch {
-    // older pdf-lib versions don't expose this — fall back to per-field updates
+    // старые версии pdf-lib не предоставляют этот метод — падаем на пообмещение полей
   }
 
   const cls = refs.classes[character.class_code];
@@ -89,7 +89,7 @@ export async function exportCharacterPdf(
   const bgLabel = bg?.name_ru ?? "";
   const subclassLabel = subclass?.name_ru ?? "";
 
-  // --- Top header ---
+  // --- Шапка страницы ---
   safeSetText(form, TOP_FIELDS.name, character.name, cyrFont);
   safeSetText(
     form,
@@ -112,7 +112,7 @@ export async function exportCharacterPdf(
   );
   safeSetText(form, TOP_FIELDS.ac, String(ac), cyrFont);
 
-  // --- Ability scores + modifiers + saves ---
+  // --- Характеристики + модификаторы + спасброски ---
   const profSaves = new Set(cls?.saving_throw_abilities ?? []);
   for (const a of ABILITY_ORDER) {
     const f = ABILITY_FIELDS[a];
@@ -124,7 +124,7 @@ export async function exportCharacterPdf(
     safeSetText(form, f.save, formatModifier(save), cyrFont);
   }
 
-  // --- Skill values (mod + pb if proficient) ---
+  // --- Значения навыков (модификатор + бонус мастерства, если есть владение) ---
   const proficientSkills = new Set([
     ...(bg?.granted_skills ?? []),
     ...character.chosen_skills,
@@ -138,7 +138,7 @@ export async function exportCharacterPdf(
     safeSetText(form, fieldName, formatModifier(total), cyrFont);
   }
 
-  // --- Mid-page header stats ---
+  // --- Показатели в середине страницы ---
   const wisMod = abilityModifier(finalScores.wis);
   const profPerception =
     character.chosen_skills.includes("perception") ||
@@ -155,10 +155,10 @@ export async function exportCharacterPdf(
     cyrFont,
   );
 
-  // --- Proficiency bonus tile (top-left) ---
+  // --- Плитка бонуса мастерства (верхний левый угол) ---
   safeSetText(form, PROFICIENCY_BONUS_FIELD, `+${pb}`, cyrFont);
 
-  // --- Weapons table (page 1) ---
+  // --- Таблица оружия (страница 1) ---
   const weapons = character.items.filter(
     (it) => refs.items[it.code]?.type === "weapon",
   );
@@ -171,7 +171,7 @@ export async function exportCharacterPdf(
     }
   });
 
-  // --- Page 1: feats list (drawn directly to bypass auto-resize) ---
+  // --- Страница 1: список черт (отрисовываем напрямую, чтобы обойти авторесайз) ---
   const pages = doc.getPages();
   const page1 = pages[0];
   if (character.feats.length > 0) {
@@ -181,13 +181,13 @@ export async function exportCharacterPdf(
     drawWrappedText(page1, featsText, PAGE1_FEATS_BOX, cyrFont, TEXTAREA_SIZE);
   }
 
-  // --- Page 2: alignment name (form field — single line is fine) ---
+  // --- Страница 2: название мировоззрения (поле формы — одной строки достаточно) ---
   const alignment = ALIGNMENT_OPTIONS.find((a) => a.code === character.alignment);
   if (alignment) {
     safeSetText(form, ALIGNMENT_NAME_FIELD, alignment.name_ru, cyrFont);
   }
 
-  // --- Page 2 textareas drawn directly (form auto-resize would explode glyphs)
+  // --- Текстовые блоки страницы 2 рисуем напрямую (авторесайз поля формы раздул бы глифы) ---
   const page2 = pages[1];
   if (page2 && alignment) {
     drawWrappedText(
@@ -219,8 +219,9 @@ export async function exportCharacterPdf(
     );
   }
 
-  // --- Always-correct fallback: append a clean summary page so all data is
-  //     captured even if a template field rename drifts the mapping above. ---
+  // --- Гарантированный fallback: дописываем чистую сводную страницу, чтобы
+  //     все данные были видны, даже если переименование поля в шаблоне сломает
+  //     маппинг выше. ---
   await appendSummaryPage(doc, cyrFont, character, refs, {
     cls,
     race,
@@ -253,7 +254,7 @@ async function appendSummaryPage(
   refs: PdfRefs,
   ctx: SummaryCtx,
 ) {
-  const page = doc.addPage([595, 842]); // A4 portrait
+  const page = doc.addPage([595, 842]); // A4, портретная ориентация
   const { height, width: pageWidth } = page.getSize();
   const margin = 36;
   let y = height - margin;

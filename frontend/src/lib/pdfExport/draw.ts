@@ -1,6 +1,6 @@
 import { PDFDocument, PDFFont, rgb } from "pdf-lib";
 
-/** Wrap text by words, measuring real glyph width with the given font. */
+/** Переносит текст по словам, измеряя реальную ширину глифов в заданном шрифте. */
 export function wrapByWidth(
   text: string,
   font: PDFFont,
@@ -26,7 +26,7 @@ export function wrapByWidth(
   return lines;
 }
 
-/** Draw word-wrapped text into a rectangular box on the given page. */
+/** Отрисовывает текст с переносом по словам в прямоугольной области на заданной странице. */
 export function drawWrappedText(
   page: ReturnType<PDFDocument["getPages"]>[number],
   text: string,
@@ -52,10 +52,10 @@ export function drawWrappedText(
 }
 
 /**
- * Set a form field's text and re-render its appearance with the supplied font.
- * Form-field font *size* is controlled by the template's default appearance —
- * setFontSize is honored by some viewers but ignored by others, so we don't
- * try. For text where size matters, draw on the page with `drawWrappedText`.
+ * Устанавливает текст у поля формы и пересоздаёт его внешний вид заданным шрифтом.
+ * *Размер* шрифта поля контролируется default appearance шаблона — setFontSize
+ * учитывают одни просмотрщики PDF и игнорируют другие, поэтому мы его не задаём.
+ * Если важен размер — отрисовывайте текст напрямую через `drawWrappedText`.
  */
 export function safeSetText(
   form: ReturnType<PDFDocument["getForm"]>,
@@ -68,6 +68,6 @@ export function safeSetText(
     f.setText(value);
     f.updateAppearances(font);
   } catch {
-    // field missing or wrong type — ignore (templates change over time)
+    // поле отсутствует или другого типа — игнорируем (шаблоны со временем меняются)
   }
 }

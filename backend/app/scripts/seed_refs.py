@@ -1,8 +1,8 @@
-"""Seed/refresh D&D reference tables.
+"""Сид/обновление справочных таблиц D&D.
 
-Idempotent UPSERT — existing rows are updated, new ones inserted, and rows in
-the DB that aren't in the seed are deleted only if no character/subclass
-references them. Run inside the backend container:
+Идемпотентный UPSERT — существующие строки обновляются, новые добавляются,
+а строки в БД, которых нет в сиде, удаляются только если на них не ссылается
+ни персонаж, ни подкласс. Запускать внутри контейнера backend:
 
     docker compose exec backend python -m app.scripts.seed_refs
 """
@@ -36,7 +36,7 @@ from app.models.reference import (
 
 
 async def _upsert(db, model, rows: list[dict]) -> None:
-    """INSERT ... ON CONFLICT (code) DO UPDATE — preserves existing rows referenced by FKs."""
+    """INSERT ... ON CONFLICT (code) DO UPDATE — сохраняет существующие строки, на которые есть FK."""
     if not rows:
         return
     pk = "code"

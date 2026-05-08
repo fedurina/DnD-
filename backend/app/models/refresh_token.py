@@ -9,11 +9,10 @@ from app.db.base import Base
 
 
 class RefreshToken(Base):
-    """Server-side state for issued refresh tokens.
+    """Серверное состояние выпущенных refresh-токенов.
 
-    The JWT itself carries `jti` and `sub`; revocation is checked by joining on
-    `jti` here. `revoked_at IS NULL` means the token is still valid (subject to
-    its own `exp`).
+    Сам JWT несёт `jti` и `sub`; отзыв проверяется по соединению с `jti` здесь.
+    `revoked_at IS NULL` означает, что токен ещё валиден (с учётом собственного `exp`).
     """
 
     __tablename__ = "refresh_tokens"

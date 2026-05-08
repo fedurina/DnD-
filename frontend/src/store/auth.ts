@@ -19,8 +19,8 @@ interface AuthState {
   changePassword: (payload: PasswordChangePayload) => Promise<void>;
 }
 
-// Access token lives in memory only — refresh token is in an httpOnly cookie
-// and is not accessible to JS, defending against XSS exfiltration.
+// Access-токен хранится только в памяти — refresh-токен лежит в httpOnly-куке
+// и недоступен из JS, что защищает от извлечения через XSS.
 export const useAuthStore = create<AuthState>()((set, get) => ({
   accessToken: null,
   user: null,
@@ -48,13 +48,13 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     try {
       await authApi.logout();
     } catch {
-      // ignore — clear local state regardless
+      // игнорируем — локальное состояние всё равно сбрасываем
     }
     set({ accessToken: null, user: null, status: "unauthenticated" });
   },
 
   bootstrap: async () => {
-    // Called on app mount: attempt silent refresh via the cookie.
+    // Вызывается при монтировании приложения: пытаемся молча обновиться через куку.
     set({ status: "loading" });
     const ok = await get().tryRefresh();
     if (!ok) {

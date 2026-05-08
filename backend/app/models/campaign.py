@@ -34,7 +34,7 @@ class Campaign(Base):
 
     invite_code: Mapped[str] = mapped_column(String(16), nullable=False, unique=True, index=True)
 
-    # Empty list means "no restriction".
+    # Пустой список означает «без ограничений».
     allowed_races: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     allowed_classes: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     max_level: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
@@ -66,7 +66,7 @@ class CampaignMember(Base):
         primary_key=True,
     )
 
-    # Nullable: a player can join first, then attach a character later.
+    # Может быть NULL: игрок может сначала присоединиться, а персонажа прикрепить позже.
     character_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("characters.id", ondelete="SET NULL"),

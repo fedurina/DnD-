@@ -1,4 +1,4 @@
-"""create refresh_tokens table
+"""создание таблицы refresh_tokens
 
 Revision ID: a1b2c3d4e5f6
 Revises: 9df6359e88ec

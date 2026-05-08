@@ -34,7 +34,7 @@ export default function RandomCharacterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Initial roll once refs are ready.
+  // Первый бросок, как только справочники загрузятся.
   useEffect(() => {
     if (refsStatus !== "loaded" || draft !== null) return;
     setDraft(

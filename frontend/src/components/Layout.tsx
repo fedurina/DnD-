@@ -41,7 +41,7 @@ export default function Layout() {
     try {
       localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0");
     } catch {
-      // ignore storage errors
+      // игнорируем ошибки доступа к storage
     }
   }, [collapsed]);
 

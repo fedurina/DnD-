@@ -1,12 +1,12 @@
-"""add feats, items, equipment columns
+"""добавление колонок feats, items, equipment
 
 Revision ID: c3d4e5f6a7b8
 Revises: b2c3d4e5f6a7
 Create Date: 2026-05-07 14:00:00.000000
 
-Non-destructive: existing characters get feats=[], items=[], gold=0 via
-server_default backfill. The default is then dropped so future inserts must
-supply explicit values (matching the model + Pydantic validators).
+Неразрушающая миграция: существующим персонажам бэкфиллим feats=[], items=[],
+gold=0 через server_default. Затем default сбрасывается, чтобы будущие INSERT-ы
+явно передавали значения (как в модели + Pydantic-валидаторах).
 """
 from typing import Sequence, Union
 
@@ -22,7 +22,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # ---- new ref tables ----
+    # ---- новые справочные таблицы ----
     op.create_table(
         "ref_feats",
         sa.Column("code", sa.String(length=64), primary_key=True),
@@ -41,7 +41,7 @@ def upgrade() -> None:
         sa.Column("cost_gp", sa.Numeric(10, 2), nullable=True),
     )
 
-    # ---- ref_classes: starting equipment + alt gold ----
+    # ---- ref_classes: стартовое снаряжение + альтернативное золото ----
     op.add_column(
         "ref_classes",
         sa.Column(
@@ -63,7 +63,7 @@ def upgrade() -> None:
     op.alter_column("ref_classes", "starting_equipment", server_default=None)
     op.alter_column("ref_classes", "starting_gold_alt", server_default=None)
 
-    # ---- ref_backgrounds: replace feat_ru with feat_code, add equipment ----
+    # ---- ref_backgrounds: заменяем feat_ru на feat_code, добавляем снаряжение ----
     op.add_column(
         "ref_backgrounds",
         sa.Column("feat_code", sa.String(length=64), nullable=False, server_default=""),
@@ -91,7 +91,7 @@ def upgrade() -> None:
     op.alter_column("ref_backgrounds", "starting_gold_alt", server_default=None)
     op.drop_column("ref_backgrounds", "feat_ru")
 
-    # ---- characters: feats, items, gold ----
+    # ---- characters: feats, items, gold ---- (поля персонажей)
     op.add_column(
         "characters",
         sa.Column(

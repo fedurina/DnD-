@@ -11,11 +11,11 @@ from app.models.reference import CharacterClass, Race
 from app.models.user import User, UserRole
 from app.schemas.campaign import CampaignCreate, CampaignUpdate
 
-INVITE_ALPHABET = string.ascii_uppercase + string.digits  # no lowercase, easier to share aloud
+INVITE_ALPHABET = string.ascii_uppercase + string.digits  # без строчных букв — проще диктовать вслух
 
 
 class CampaignError(Exception):
-    """Base for campaign service domain errors."""
+    """Базовый класс для доменных ошибок сервиса кампаний."""
 
 
 class CampaignPermissionError(CampaignError):
@@ -37,7 +37,7 @@ def _generate_invite_code(length: int = 8) -> str:
 def _character_mismatches_campaign(
     character: Character | None, campaign: Campaign
 ) -> bool:
-    """True if the attached character no longer fits the (possibly updated) campaign rules."""
+    """True, если прикреплённый персонаж больше не подходит под (возможно обновлённые) правила кампании."""
     if character is None:
         return False
     if character.is_archived:
@@ -60,7 +60,7 @@ async def _allocate_invite_code(db: AsyncSession) -> str:
     raise CampaignError("Не удалось сгенерировать уникальный код приглашения")
 
 
-# ---------- Create / Update / Delete ----------
+# ---------- Создание / Обновление / Удаление ----------
 
 async def create_campaign(
     db: AsyncSession, master: User, payload: CampaignCreate
@@ -126,10 +126,10 @@ async def regenerate_invite(db: AsyncSession, user: User, campaign_id: uuid.UUID
     return campaign
 
 
-# ---------- List / Detail ----------
+# ---------- Список / Детальная карточка ----------
 
 async def list_for_user(db: AsyncSession, user: User) -> dict[str, list]:
-    """Return owned + joined campaigns as lightweight summaries."""
+    """Возвращает свои + присоединённые кампании в виде облегчённых сводок."""
     owned_q = await db.execute(
         select(Campaign, User.username)
         .join(User, User.id == Campaign.master_id)
@@ -154,7 +154,7 @@ async def list_for_user(db: AsyncSession, user: User) -> dict[str, list]:
     )
     counts = {row[0]: row[1] for row in counts_q.all()}
 
-    # For owned campaigns: needs_attention = at least one member's character mismatches.
+    # Для своих кампаний: needs_attention = у хотя бы одного участника персонаж не подходит.
     owned_ids = [c.id for c, _ in owned_rows]
     owned_attention: dict[uuid.UUID, bool] = {cid: False for cid in owned_ids}
     if owned_ids:
@@ -218,7 +218,7 @@ async def get_detail(
 
     is_master = campaign.master_id == user.id
 
-    # Membership check (only members or master can view)
+    # Проверка членства (видеть могут только участники или мастер).
     member_q = await db.execute(
         select(CampaignMember).where(
             CampaignMember.campaign_id == campaign_id,
@@ -270,7 +270,7 @@ async def get_detail(
     }
 
 
-# ---------- Membership ----------
+# ---------- Членство ----------
 
 async def join_by_code(
     db: AsyncSession, user: User, invite_code: str, character_id: uuid.UUID | None

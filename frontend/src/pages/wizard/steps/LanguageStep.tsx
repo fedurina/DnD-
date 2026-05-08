@@ -11,7 +11,7 @@ export function LanguageStep({
   const remaining = REQUIRED_LANGUAGE_COUNT - value.length;
 
   const toggle = (code: LanguageCode) => {
-    if (code === "common") return; // common is locked
+    if (code === "common") return; // общий заблокирован
     if (value.includes(code)) {
       onChange(value.filter((c) => c !== code));
     } else if (value.length < REQUIRED_LANGUAGE_COUNT) {

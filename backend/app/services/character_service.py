@@ -18,7 +18,7 @@ from app.schemas.character import CharacterCreate, CharacterUpdate, InventoryEnt
 
 
 class CharacterValidationError(ValueError):
-    """Raised when payload is structurally valid but fails domain rules."""
+    """Бросается, когда payload структурно валиден, но не соответствует доменным правилам."""
 
 
 async def _load_refs(
@@ -99,7 +99,7 @@ async def _validate_subclass(
     cls: CharacterClass,
     subclass_code: str | None,
 ) -> None:
-    """At/above class.subclass_start_level a subclass is required and must belong to the class."""
+    """С уровня class.subclass_start_level и выше подкласс обязателен и должен принадлежать классу."""
     requires = level >= cls.subclass_start_level
     if requires:
         if not subclass_code:
@@ -130,7 +130,7 @@ def _validate_bg_bonus_keys(bonuses: dict[str, int], bg: Background) -> None:
             f"Бонусы предыстории можно распределять только среди {sorted(valid)}; "
             f"недопустимо: {sorted(invalid)}"
         )
-    # If +1/+1/+1, must use all 3 listed abilities.
+    # При раскладке +1/+1/+1 нужно задействовать все 3 указанные характеристики.
     if sorted(bonuses.values()) == [1, 1, 1] and set(bonuses) != valid:
         raise CharacterValidationError(
             "Распределение +1/+1/+1 должно затрагивать все три характеристики предыстории"
@@ -187,10 +187,10 @@ async def list_characters(
 
 
 def _character_mismatches(character: Character, campaign: Campaign) -> bool:
-    """True if attached character no longer fits campaign rules.
+    """True, если прикреплённый персонаж больше не подходит под правила кампании.
 
-    Mirrors campaign_service._character_mismatches_campaign — kept here to avoid
-    cross-module import of a private symbol.
+    Зеркалирует campaign_service._character_mismatches_campaign — оставлено здесь,
+    чтобы не импортировать приватный символ из соседнего модуля.
     """
     if character.is_archived:
         return True
@@ -206,7 +206,7 @@ def _character_mismatches(character: Character, campaign: Campaign) -> bool:
 async def get_attached_campaigns_map(
     db: AsyncSession, characters: list[Character]
 ) -> dict[uuid.UUID, list[dict]]:
-    """For each character, return list of attached-campaigns dicts with needs_attention."""
+    """Для каждого персонажа возвращает список словарей прикреплённых кампаний с признаком needs_attention."""
     if not characters:
         return {}
     char_by_id = {c.id: c for c in characters}
@@ -231,7 +231,7 @@ async def get_attached_campaigns_map(
 async def _is_master_of_campaign_with_character(
     db: AsyncSession, user: User, character_id: uuid.UUID
 ) -> bool:
-    """True if user masters any campaign where this character is currently attached."""
+    """True, если пользователь является мастером любой кампании, к которой сейчас прикреплён этот персонаж."""
     result = await db.execute(
         select(Campaign.id)
         .join(CampaignMember, CampaignMember.campaign_id == Campaign.id)
@@ -246,7 +246,7 @@ async def _is_master_of_campaign_with_character(
 async def get_character(
     db: AsyncSession, user: User, character_id: uuid.UUID
 ) -> Character | None:
-    """Visibility: owner OR master of a campaign that has the character attached."""
+    """Видимость: владелец ИЛИ мастер кампании, к которой прикреплён этот персонаж."""
     char = await db.get(Character, character_id)
     if char is None:
         return None
@@ -260,7 +260,7 @@ async def get_character(
 async def _get_owned_character(
     db: AsyncSession, user: User, character_id: uuid.UUID
 ) -> Character | None:
-    """Strict owner check, for owner-only operations (archive, delete)."""
+    """Строгая проверка владельца, для операций «только владелец» (архивирование, удаление)."""
     char = await db.get(Character, character_id)
     if char is None or char.user_id != user.id:
         return None
@@ -285,7 +285,7 @@ async def update_character(
     if char is None:
         return None
 
-    # Compute future state.
+    # Вычисляем будущее состояние.
     new_race_code = payload.race_code if payload.race_code is not None else char.race_code
     new_class_code = (
         payload.class_code if payload.class_code is not None else char.class_code
@@ -310,7 +310,7 @@ async def update_character(
     )
     new_level = payload.level if payload.level is not None else char.level
 
-    # Validate refs exist.
+    # Проверяем, что справочные сущности существуют.
     race = await db.get(Race, new_race_code)
     if race is None:
         raise CharacterValidationError("Раса не найдена")
@@ -321,9 +321,9 @@ async def update_character(
     if bg is None:
         raise CharacterValidationError("Предыстория не найдена")
 
-    # Subclass: take from payload if present; else if class changed, drop the previous
-    # one (it belonged to the old class); else inherit current. After computing, drop it
-    # automatically if the new level is below the class's subclass_start_level.
+    # Подкласс: берём из payload, если он там; иначе если класс изменился — сбрасываем
+    # предыдущий (он относился к старому классу); иначе наследуем текущий. После расчёта
+    # автоматически сбрасываем, если новый уровень ниже class.subclass_start_level.
     class_changed = payload.class_code is not None and new_class_code != char.class_code
     if payload.subclass_code is not None:
         new_subclass_code: str | None = payload.subclass_code
@@ -337,11 +337,11 @@ async def update_character(
         db, level=new_level, cls=cls, subclass_code=new_subclass_code
     )
 
-    # Re-run domain validators on the future state.
+    # Прогоняем доменные валидаторы по будущему состоянию.
     _validate_skills(list(new_skills), cls, bg)
     _validate_bg_bonus_keys(dict(new_bonuses), bg)
 
-    # Re-validate against every campaign the character is currently attached to.
+    # Перепроверяем по каждой кампании, к которой персонаж сейчас прикреплён.
     memberships = await db.execute(
         select(Campaign)
         .join(CampaignMember, CampaignMember.campaign_id == Campaign.id)
@@ -362,8 +362,9 @@ async def update_character(
                 f"в кампании «{campaign.name}»"
             )
 
-    # If background changed, ensure feats still match the new bg's origin feat,
-    # regardless of whether the client also sent a new feats list.
+    # Если предыстория изменилась — проверяем, что черты всё ещё содержат
+    # изначальную черту новой предыстории, даже если клиент не присылал новый
+    # список черт.
     bg_changed = payload.background_code is not None and new_bg_code != char.background_code
     new_feats = list(payload.feats) if payload.feats is not None else list(char.feats)
     if payload.feats is not None or bg_changed:
@@ -371,7 +372,7 @@ async def update_character(
     if payload.items is not None:
         await _validate_items(db, payload.items)
 
-    # Apply.
+    # Применяем.
     if payload.name is not None:
         char.name = payload.name
     if payload.alignment is not None:

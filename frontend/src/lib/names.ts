@@ -1,6 +1,6 @@
 import type { Gender } from "@/types/character";
 
-// Stylized D&D names per race + gender. Russian transliteration to match the UI.
+// Стилизованные D&D-имена по расе и полу. Русская транслитерация под общий стиль интерфейса.
 const NAMES: Record<string, Record<Gender, string[]>> = {
   human: {
     male: ["Альдрик", "Бренн", "Гарет", "Дориан", "Кэлен", "Лаэрт", "Магнус", "Ренар", "Тибор", "Эмерик"],

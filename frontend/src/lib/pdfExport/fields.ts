@@ -1,8 +1,8 @@
-// Mapping from semantic position → AcroForm field name in the
-// frontend/public/templates/DnD_2024.pdf template. The template's field names
-// are auto-generated and non-semantic (`text_1imkp` etc.); these maps are
-// derived from widget rectangles and visual verification. To remap a field,
-// dump field positions with a one-shot Node script using
+// Сопоставление «семантическая позиция → имя AcroForm-поля» в шаблоне
+// frontend/public/templates/DnD_2024.pdf. Имена полей в шаблоне сгенерированы
+// автоматически и несемантичны (`text_1imkp` и т.п.); эти карты составлены
+// по координатам виджетов и визуальной сверке. Чтобы переопределить поле,
+// дампите его позицию одноразовым Node-скриптом через
 // `acroField.getWidgets()[0].getRectangle()`.
 
 import type { AbilityCode } from "@/types/character";
@@ -29,31 +29,31 @@ export interface PdfRefs {
   subclasses: Record<string, Subclass>;
 }
 
-// Top-of-page mapping. The template has only 3 full-width fields at the top
-// (no separate slot for class/subclass on the same line as background/race),
-// so we pack them via a separator.
+// Поля в шапке листа. В шаблоне всего 3 поля на всю ширину сверху (нет
+// отдельного слота для класса/подкласса на одной строке с предысторией/расой),
+// поэтому пакуем их через разделитель.
 export const TOP_FIELDS = {
-  name: "text_1imkp", // line 1 — character name
-  background_class: "text_2qgox", // line 2 — predystoria · class
-  race_subclass: "text_3bfkv", // line 3 — vid · subclass
-  level: "text_4deth", // small "УРОВЕНЬ" oval box
-  xp: "text_5mocb", // "ОПЫТ" box below level
-  ac: "text_6agjh", // "КЛАСС ЗАЩИТЫ" box
+  name: "text_1imkp", // строка 1 — имя персонажа
+  background_class: "text_2qgox", // строка 2 — предыстория · класс
+  race_subclass: "text_3bfkv", // строка 3 — раса · подкласс
+  level: "text_4deth", // маленькая овальная ячейка «УРОВЕНЬ»
+  xp: "text_5mocb", // ячейка «ОПЫТ» под уровнем
+  ac: "text_6agjh", // ячейка «КЛАСС ЗАЩИТЫ»
 } as const;
 
-// XP thresholds per PHB 2024 (index = level).
+// Пороги опыта по PHB 2024 (индекс = уровень).
 export const XP_FOR_LEVEL = [
   0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
   85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000,
 ];
 
-// Ability tiles. Each tile has a big modifier circle (left) and a small score
-// box (right). Both are fillable form fields. Saving-throw values live just
-// below the tile.
+// Плитки характеристик. У каждой плитки большой кружок модификатора (слева)
+// и маленькая ячейка значения (справа). Оба — заполняемые поля формы. Поля
+// для спасбросков расположены прямо под плиткой.
 //
-// Layout in 2024 sheet:
-//   Left column (x≈31):  STR (y=540), DEX (y=422), CON (y=275)
-//   Right column (x≈137): INT (y=618), WIS (y=443), CHA (y=270)
+// Расположение в листе 2024:
+//   Левая колонка (x≈31):  СИЛ (y=540), ЛОВ (y=422), ТЕЛ (y=275)
+//   Правая колонка (x≈137): ИНТ (y=618), МУД (y=443), ХАР (y=270)
 export const ABILITY_FIELDS: Record<
   AbilityCode,
   { modifier: string; score: string; save: string }
@@ -66,7 +66,7 @@ export const ABILITY_FIELDS: Record<
   cha: { modifier: "text_22bxjy", score: "text_27jhio", save: "text_73cwxt" },
 };
 
-// 4 boxes mid-page (y=629) — left to right.
+// 4 ячейки в средней части страницы (y=629) — слева направо.
 export const HEADER_STAT_BOXES = {
   initiative: "text_13wrft",
   speed: "text_14lvnq",
@@ -74,42 +74,42 @@ export const HEADER_STAT_BOXES = {
   passive_perception: "text_16wgea",
 } as const;
 
-// Top-left "БОНУС ВЛАДЕНИЯ" tile.
+// Плитка «БОНУС ВЛАДЕНИЯ» в верхнем-левом углу.
 export const PROFICIENCY_BONUS_FIELD = "text_427aebp";
 
-// Skill rows under each ability tile.
-//   STR: Athletics
-//   DEX: Acrobatics, Sleight of Hand, Stealth
-//   INT: History, Arcana, Nature, Investigation, Religion
-//   WIS: Perception, Survival, Medicine, Insight, Animal Handling
-//   CHA: Performance, Intimidation, Deception, Persuasion
+// Строки навыков под каждой плиткой характеристики.
+//   СИЛ: Атлетика
+//   ЛОВ: Акробатика, Ловкость рук, Скрытность
+//   ИНТ: История, Магия, Природа, Расследование, Религия
+//   МУД: Восприятие, Выживание, Медицина, Проницательность, Уход за животными
+//   ХАР: Выступление, Запугивание, Обман, Убеждение
 export const SKILL_FIELDS: Record<string, string> = {
-  // STR
+  // СИЛ
   athletics: "text_61knsn",
-  // DEX
+  // ЛОВ
   acrobatics: "text_69srmm",
   sleight_of_hand: "text_70obrk",
   stealth: "text_71pflk",
-  // INT
+  // ИНТ
   history: "text_55nptn",
   arcana: "text_56ksru",
   nature: "text_57bjob",
   investigation: "text_58zoel",
   religion: "text_59mfqs",
-  // WIS
+  // МУД
   perception: "text_63uhiv",
   survival: "text_64odvk",
   medicine: "text_65hnhb",
   insight: "text_66djlf",
   animal_handling: "text_67cr",
-  // CHA
+  // ХАР
   performance: "text_74rkfi",
   intimidation: "text_75pauh",
   deception: "text_76vfsc",
   persuasion: "text_77nads",
 };
 
-// Page 1 weapons & spell-attacks table — 6 rows × 4 cols.
+// Таблица оружия и заклинательных атак на странице 1 — 6 строк × 4 столбца.
 export const WEAPON_ROWS: {
   name: string;
   bonus: string;
@@ -124,21 +124,21 @@ export const WEAPON_ROWS: {
   { name: "text_100zmbl", bonus: "text_106vkdo", damage: "text_112omg",  notes: "text_118cokl" },
 ];
 
-// Free-text blocks rendered with page.drawText (multi-line form fields
-// auto-resize and produce huge glyphs — we bypass them).
+// Блоки свободного текста, отрисовываемые через page.drawText (многострочные
+// поля формы авторесайзят и выдают огромные глифы — мы их обходим).
 export const PAGE2_BOXES = {
-  // "БИОГРАФИЯ И ХАРАКТЕР" / "ПРЕДЫСТОРИЯ И ЛИЧНОСТЬ" textarea.
+  // Текстовое поле «БИОГРАФИЯ И ХАРАКТЕР» / «ПРЕДЫСТОРИЯ И ЛИЧНОСТЬ».
   biography: { x: 412, y: 500, w: 175, h: 130 },
-  // "ЯЗЫКИ" textarea.
+  // Текстовое поле «ЯЗЫКИ».
   languages: { x: 412, y: 402, w: 175, h: 28 },
-  // "СНАРЯЖЕНИЕ" textarea.
+  // Текстовое поле «СНАРЯЖЕНИЕ».
   equipment: { x: 412, y: 192, w: 175, h: 165 },
 };
 
-// Single-line below the biography textarea — alignment name (form field is fine).
+// Однострочное поле под блоком биографии — мировоззрение (стандартное поле формы подходит).
 export const ALIGNMENT_NAME_FIELD = "text_275cexd";
 
-// Page 1 "ЧЕРТЫ" textarea (bottom-right) — drawn directly.
+// Текстовое поле «ЧЕРТЫ» на странице 1 (нижний правый угол) — отрисовывается напрямую.
 export const PAGE1_FEATS_BOX = { x: 412, y: 18, w: 175, h: 165 };
 
 export const TEXTAREA_SIZE = 10;

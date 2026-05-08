@@ -1,15 +1,15 @@
-"""Test fixtures.
+"""Тестовые фикстуры.
 
-Strategy:
-- Use a dedicated Postgres database `dnd_test` (created on first session run).
-- Drop & recreate schema once per session, then seed reference data.
-- TRUNCATE user-data tables before each test for isolation.
-- AsyncClient + ASGITransport hits the FastAPI app in-process.
+Стратегия:
+- Используем выделенную Postgres-базу `dnd_test` (создаётся при первом запуске сессии).
+- Один раз за сессию полностью пересоздаём схему и сеем справочные данные.
+- TRUNCATE таблиц с пользовательскими данными перед каждым тестом для изоляции.
+- AsyncClient + ASGITransport обращается к FastAPI-приложению внутри процесса.
 """
 import os
 
-# IMPORTANT: this must precede any `from app...` imports so pydantic-settings
-# picks up the test DB before the engine is constructed at module import time.
+# ВАЖНО: это должно идти до любого `from app...` импорта, чтобы pydantic-settings
+# подхватил тестовую БД до того, как движок будет сконструирован при импорте модуля.
 TEST_DB_NAME = os.getenv("TEST_DB_NAME", "dnd_test")
 TEST_DB_HOST = os.getenv("POSTGRES_HOST", "db")
 TEST_DB_USER = os.getenv("POSTGRES_USER", "dnd")
@@ -34,7 +34,7 @@ from sqlalchemy.ext.asyncio import (  # noqa: E402
 )
 from sqlalchemy.pool import NullPool  # noqa: E402
 
-from app import models  # noqa: F401, E402  ensures models are registered
+from app import models  # noqa: F401, E402  гарантирует регистрацию моделей
 import app.db.session as session_module  # noqa: E402
 from app.data.srd_55 import (  # noqa: E402
     ABILITIES,
@@ -58,8 +58,8 @@ from app.models.reference import (  # noqa: E402
     Subclass,
 )
 
-# Replace the production engine (lru-cached pool) with a NullPool one so each
-# operation grabs a fresh connection, sidestepping asyncpg's loop-affinity.
+# Подменяем продовый движок (lru-кэшированный пул) на NullPool, чтобы каждая
+# операция брала свежее соединение и обходила привязку asyncpg к event-loop.
 session_module.engine = create_async_engine(
     os.environ["DATABASE_URL"], poolclass=NullPool, echo=False, future=True
 )
@@ -72,11 +72,11 @@ session_module.AsyncSessionLocal = async_sessionmaker(
 engine = session_module.engine
 AsyncSessionLocal = session_module.AsyncSessionLocal
 
-from app.main import app  # noqa: E402  must come after engine swap
+from app.main import app  # noqa: E402  должен идти после подмены движка
 
 
 async def _ensure_test_db() -> None:
-    """Create the test database if it doesn't exist (connecting via system db)."""
+    """Создаёт тестовую БД, если её ещё нет (через системную БД)."""
     conn = await asyncpg.connect(
         host=TEST_DB_HOST,
         user=TEST_DB_USER,
@@ -97,7 +97,7 @@ async def _ensure_test_db() -> None:
 async def setup_database():
     await _ensure_test_db()
 
-    # Reset schema and seed reference data once per session.
+    # Один раз за сессию пересоздаём схему и сеем справочные данные.
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
@@ -120,7 +120,7 @@ async def setup_database():
 
 @pytest_asyncio.fixture(autouse=True)
 async def clean_user_data():
-    """Wipe non-reference tables before each test."""
+    """Очищает несправочные таблицы перед каждым тестом."""
     async with engine.begin() as conn:
         await conn.execute(
             text(
@@ -137,7 +137,7 @@ async def client():
         yield c
 
 
-# ---------------------------------------------------------------- factories
+# ---------------------------------------------------------------- фабрики
 
 
 def valid_character_payload(**overrides) -> dict:
@@ -154,7 +154,7 @@ def valid_character_payload(**overrides) -> dict:
         "background_bonuses": {"int": 2, "wis": 1},
         "chosen_skills": ["investigation", "religion"],
         "languages": ["common", "elvish", "draconic"],
-        # sage's origin feat
+        # изначальная черта предыстории «sage»
         "feats": ["magic_initiate_wizard"],
         "items": [],
         "gold": 55,
@@ -165,7 +165,7 @@ def valid_character_payload(**overrides) -> dict:
     return payload
 
 
-# --------------------------------------------------------------- auth fixtures
+# --------------------------------------------------------------- auth-фикстуры
 
 
 async def _register_and_login(
