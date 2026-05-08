@@ -4,6 +4,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.schemas.reference import InventoryEntry
+
 ABILITY_KEYS = {"str", "dex", "con", "int", "wis", "cha"}
 STANDARD_ARRAY_SORTED = [8, 10, 12, 13, 14, 15]
 
@@ -37,9 +39,14 @@ def _validate_languages(v: list[str]) -> list[str]:
     return v
 
 
-class InventoryEntry(BaseModel):
-    code: str
-    qty: int = Field(ge=1)
+__all__ = [
+    "InventoryEntry",
+    "CharacterCreate",
+    "CharacterUpdate",
+    "CharacterOut",
+    "CharacterSummary",
+    "CharacterCampaignBrief",
+]
 
 
 class CharacterCreate(BaseModel):

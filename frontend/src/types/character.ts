@@ -1,3 +1,7 @@
+import type { InventoryEntry } from "./reference";
+
+export type { InventoryEntry };
+
 export type AbilityCode = "str" | "dex" | "con" | "int" | "wis" | "cha";
 
 export type Alignment =
@@ -12,11 +16,6 @@ export type LanguageCode =
   | "gnomish" | "goblin" | "halfling" | "orcish" | "draconic";
 
 export type AbilityScores = Record<AbilityCode, number>;
-
-export interface InventoryEntry {
-  code: string;
-  qty: number;
-}
 
 export type EquipChoice = "set" | "gold";
 

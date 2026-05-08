@@ -10,6 +10,7 @@ import ProfilePage from "@/pages/ProfilePage";
 import CharactersPage from "@/pages/CharactersPage";
 import CharacterWizardPage from "@/pages/CharacterWizardPage";
 import CharacterDetailPage from "@/pages/CharacterDetailPage";
+import RandomCharacterPage from "@/pages/RandomCharacterPage";
 import CampaignsPage from "@/pages/CampaignsPage";
 import CampaignCreatePage from "@/pages/CampaignCreatePage";
 import CampaignDetailPage from "@/pages/CampaignDetailPage";
@@ -35,6 +36,7 @@ export const router = createBrowserRouter([
           { path: "/profile", element: <ProfilePage /> },
           { path: "/characters", element: <CharactersPage /> },
           { path: "/characters/new", element: <CharacterWizardPage /> },
+          { path: "/characters/random", element: <RandomCharacterPage /> },
           { path: "/characters/:id", element: <CharacterDetailPage /> },
           { path: "/characters/:id/edit", element: <CharacterWizardPage /> },
           { path: "/campaigns", element: <CampaignsPage /> },

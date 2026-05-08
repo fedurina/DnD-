@@ -6,34 +6,58 @@ import type {
   Background,
   CharacterClass,
   Feat,
+  FeatCategory,
+  Item,
   Race,
   Skill,
+  Subclass,
 } from "@/types/reference";
 
-type Tab = "races" | "classes" | "backgrounds" | "skills";
+type Tab =
+  | "races"
+  | "classes"
+  | "subclasses"
+  | "backgrounds"
+  | "skills"
+  | "feats"
+  | "items";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "races", label: "Расы" },
   { id: "classes", label: "Классы" },
+  { id: "subclasses", label: "Архетипы" },
   { id: "backgrounds", label: "Предыстории" },
   { id: "skills", label: "Навыки" },
+  { id: "feats", label: "Черты" },
+  { id: "items", label: "Предметы" },
 ];
 
 export default function ReferencesPage() {
   const [tab, setTab] = useState<Tab>("races");
   const status = useEnsureRefs();
-  const { abilities, skills, races, classes, backgrounds, feats, error } = useRefsStore();
+  const {
+    abilities,
+    skills,
+    races,
+    classes,
+    subclasses,
+    backgrounds,
+    feats,
+    items,
+    error,
+  } = useRefsStore();
 
   const skillByCode = useMemo(() => byCode(skills), [skills]);
   const abilityByCode = useMemo(() => byCode(abilities), [abilities]);
   const featByCode = useMemo(() => byCode(feats), [feats]);
+  const classByCode = useMemo(() => byCode(classes), [classes]);
 
   return (
     <>
       <header className="page-header">
         <div>
           <h1>Справочник</h1>
-          <p>D&D 5.5e (2024) — MVP-набор: 5 рас, 5 классов, 5 предысторий.</p>
+          <p>D&D 5.5e (2024).</p>
         </div>
       </header>
 
@@ -56,6 +80,9 @@ export default function ReferencesPage() {
       {status === "loaded" && tab === "classes" && (
         <ClassesTab classes={classes} skillByCode={skillByCode} abilityByCode={abilityByCode} />
       )}
+      {status === "loaded" && tab === "subclasses" && (
+        <SubclassesTab subclasses={subclasses} classByCode={classByCode} />
+      )}
       {status === "loaded" && tab === "backgrounds" && (
         <BackgroundsTab
           backgrounds={backgrounds}
@@ -67,6 +94,8 @@ export default function ReferencesPage() {
       {status === "loaded" && tab === "skills" && (
         <SkillsTab skills={skills} abilityByCode={abilityByCode} />
       )}
+      {status === "loaded" && tab === "feats" && <FeatsTab feats={feats} />}
+      {status === "loaded" && tab === "items" && <ItemsTab items={items} />}
     </>
   );
 }
@@ -203,6 +232,143 @@ function SkillsTab({
             ))}
           </ul>
         </article>
+      ))}
+    </div>
+  );
+}
+
+const FEAT_CATEGORY_LABEL: Record<FeatCategory, string> = {
+  origin: "Происхождения",
+  general: "Общие",
+  fighting_style: "Боевой стиль",
+};
+
+const ITEM_TYPE_LABEL: Record<string, string> = {
+  weapon: "Оружие",
+  armor: "Броня",
+  ammunition: "Боеприпасы",
+  gear: "Снаряжение",
+  kit: "Набор",
+  tool: "Инструмент",
+  currency: "Монеты",
+};
+
+function SubclassesTab({
+  subclasses,
+  classByCode,
+}: {
+  subclasses: Subclass[];
+  classByCode: Record<string, CharacterClass>;
+}) {
+  return (
+    <div className="grid-cards">
+      {subclasses.map((s) => {
+        const cls = classByCode[s.class_code];
+        return (
+          <article key={s.code} className="card">
+            <header style={{ marginBottom: 12 }}>
+              <h3 className="card-title">{s.name_ru}</h3>
+              <div className="card-subtitle">
+                Класс: {cls?.name_ru ?? s.class_code} · доступен с{" "}
+                {cls?.subclass_start_level ?? 3} ур.
+              </div>
+            </header>
+            <p className="muted" style={{ fontSize: 13.5, margin: 0 }}>
+              {s.description_ru}
+            </p>
+          </article>
+        );
+      })}
+      {subclasses.length === 0 && (
+        <p className="muted">Архетипы пока не добавлены.</p>
+      )}
+    </div>
+  );
+}
+
+function FeatsTab({ feats }: { feats: Feat[] }) {
+  const [filter, setFilter] = useState<"all" | FeatCategory>("all");
+  const visible =
+    filter === "all" ? feats : feats.filter((f) => f.category === filter);
+
+  return (
+    <>
+      <div className="row" style={{ gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+        {(["all", "origin", "general", "fighting_style"] as const).map((f) => (
+          <button
+            key={f}
+            type="button"
+            className={"chip chip-sm" + (filter === f ? " is-selected" : "")}
+            onClick={() => setFilter(f)}
+          >
+            {f === "all" ? "Все" : FEAT_CATEGORY_LABEL[f]}
+          </button>
+        ))}
+      </div>
+      <div className="grid-cards">
+        {visible.map((f) => (
+          <article key={f.code} className="card">
+            <header style={{ marginBottom: 8 }}>
+              <h3 className="card-title">{f.name_ru}</h3>
+              <div className="card-subtitle">
+                {FEAT_CATEGORY_LABEL[f.category]}
+                {f.is_repeatable ? " · можно взять несколько раз" : ""}
+              </div>
+            </header>
+            <p className="muted" style={{ fontSize: 13.5, marginBottom: 8 }}>
+              {f.description_ru}
+            </p>
+            {f.prerequisites_ru && (
+              <KeyValue label="Требования" value={f.prerequisites_ru} />
+            )}
+          </article>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function ItemsTab({ items }: { items: Item[] }) {
+  const grouped = useMemo(() => {
+    const map: Record<string, Item[]> = {};
+    for (const it of items) (map[it.type] ??= []).push(it);
+    return map;
+  }, [items]);
+
+  const order = ["weapon", "armor", "ammunition", "kit", "tool", "gear", "currency"];
+  const groups = order.filter((t) => grouped[t]?.length);
+
+  return (
+    <div className="stack">
+      {groups.map((type) => (
+        <section key={type} className="card">
+          <header style={{ marginBottom: 12 }}>
+            <h3 className="card-title">{ITEM_TYPE_LABEL[type] ?? type}</h3>
+            <div className="card-subtitle">{grouped[type].length} предметов</div>
+          </header>
+          <table className="sheet-table" style={{ width: "100%" }}>
+            <thead>
+              <tr>
+                <th>Название</th>
+                <th>Описание</th>
+                <th className="num">Цена, зм</th>
+              </tr>
+            </thead>
+            <tbody>
+              {grouped[type].map((it) => (
+                <tr key={it.code}>
+                  <td>
+                    <b>{it.name_ru}</b>
+                  </td>
+                  <td className="muted" style={{ fontSize: 12.5 }}>
+                    {it.description_ru}
+                  </td>
+                  <td className="num">{it.cost_gp ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
       ))}
     </div>
   );

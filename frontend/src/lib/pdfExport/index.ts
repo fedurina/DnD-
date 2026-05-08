@@ -17,202 +17,27 @@ import type { AbilityCode, AbilityScores, Character } from "@/types/character";
 import type {
   Background,
   CharacterClass,
-  Feat,
-  Item,
   Race,
-  Skill,
   Subclass,
 } from "@/types/reference";
 
-const TEMPLATE_URL = "/templates/DnD_2024.pdf";
-const FONT_URL = "/fonts/NotoSans-Regular.ttf";
-
-interface PdfRefs {
-  classes: Record<string, CharacterClass>;
-  races: Record<string, Race>;
-  backgrounds: Record<string, Background>;
-  skills: Record<string, Skill>;
-  feats: Record<string, Feat>;
-  items: Record<string, Item>;
-  subclasses: Record<string, Subclass>;
-}
-
-// Top-of-page mapping. The template has only 3 full-width fields at the top
-// (no separate slot for class/subclass on the same line as background/race),
-// so we pack them via a separator.
-const TOP_FIELDS = {
-  name: "text_1imkp", // line 1 — character name
-  background_class: "text_2qgox", // line 2 — predystoria | class
-  race_subclass: "text_3bfkv", // line 3 — vid | subclass
-  level: "text_4deth", // small "УРОВЕНЬ" oval box
-  xp: "text_5mocb", // "ОПЫТ" box below level
-  ac: "text_6agjh", // "КЛАСС ЗАЩИТЫ" box (was text_5mocb — wrong)
-} as const;
-
-// XP thresholds per PHB 2024 (index = level).
-const XP_FOR_LEVEL = [
-  0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
-  85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000,
-];
-
-// Ability tiles. Each tile has a big modifier circle (left) and a small score
-// box (right). Both are fillable form fields. Saving-throw values live just
-// below the tile.
-//
-// Layout in 2024 sheet:
-//   Left column (x≈31):  STR (y=540), DEX (y=422), CON (y=275)
-//   Right column (x≈137): INT (y=618), WIS (y=443), CHA (y=270)
-const ABILITY_FIELDS: Record<
-  AbilityCode,
-  { modifier: string; score: string; save: string }
-> = {
-  str: { modifier: "text_17vpmg", score: "text_23ewgq", save: "text_60zpuk" },
-  dex: { modifier: "text_18ruyf", score: "text_26ccgh", save: "text_68bipd" },
-  con: { modifier: "text_21kabi", score: "text_28owjh", save: "text_72gnbq" },
-  int: { modifier: "text_19lqwv", score: "text_24rqar", save: "text_54bfgy" },
-  wis: { modifier: "text_20zbar", score: "text_25blbj", save: "text_62yaan" },
-  cha: { modifier: "text_22bxjy", score: "text_27jhio", save: "text_73cwxt" },
-};
-
-// 4 boxes mid-page (y=629), best-guess by left-to-right position.
-const HEADER_STAT_BOXES = {
-  initiative: "text_13wrft",
-  speed: "text_14lvnq",
-  size: "text_15cqja",
-  passive_perception: "text_16wgea",
-} as const;
-
-// Proficiency-bonus tile (top-left "БОНУС ВЛАДЕНИЯ"). Best-guess.
-const PROFICIENCY_BONUS_FIELD = "text_427aebp";
-
-// Skill rows under each ability tile. Map: skill code → form field name.
-// Order in template (top to bottom under each tile):
-//   STR: Athletics
-//   DEX: Acrobatics, Sleight of Hand, Stealth
-//   INT: History, Arcana, Nature, Investigation, Religion
-//   WIS: Perception, Survival, Medicine, Insight, Animal Handling
-//   CHA: Performance, Intimidation, Deception, Persuasion
-const SKILL_FIELDS: Record<string, string> = {
-  // STR
-  athletics: "text_61knsn",
-  // DEX
-  acrobatics: "text_69srmm",
-  sleight_of_hand: "text_70obrk",
-  stealth: "text_71pflk",
-  // INT
-  history: "text_55nptn",
-  arcana: "text_56ksru",
-  nature: "text_57bjob",
-  investigation: "text_58zoel",
-  religion: "text_59mfqs",
-  // WIS
-  perception: "text_63uhiv",
-  survival: "text_64odvk",
-  medicine: "text_65hnhb",
-  insight: "text_66djlf",
-  animal_handling: "text_67cr",
-  // CHA
-  performance: "text_74rkfi",
-  intimidation: "text_75pauh",
-  deception: "text_76vfsc",
-  persuasion: "text_77nads",
-};
-
-// Page 1 weapons & spell-attacks table — 6 rows × 4 cols.
-const WEAPON_ROWS: { name: string; bonus: string; damage: string; notes: string }[] = [
-  { name: "text_95mtme",  bonus: "text_101ohoi", damage: "text_107qvwl", notes: "text_113tpwa" },
-  { name: "text_96nzoa",  bonus: "text_102yibj", damage: "text_108aybq", notes: "text_114lhuk" },
-  { name: "text_97iydj",  bonus: "text_103rlae", damage: "text_109slbn", notes: "text_115pcxn" },
-  { name: "text_98wnad",  bonus: "text_104qwkw", damage: "text_110lbdh", notes: "text_116sohv" },
-  { name: "text_99bdzl",  bonus: "text_105gvuz", damage: "text_111ubex", notes: "text_117fabc" },
-  { name: "text_100zmbl", bonus: "text_106vkdo", damage: "text_112omg",  notes: "text_118cokl" },
-];
-
-// Page 2 free-text blocks. We draw text directly onto the page (page.drawText)
-// because multi-line form fields auto-resize the font to fit and renderers
-// produce gigantic glyphs for short content. These rectangles match the
-// underlying form field dimensions; we use them as drawing bounds.
-const PAGE2_BOXES = {
-  // "БИОГРАФИЯ И ХАРАКТЕР" / "ПРЕДЫСТОРИЯ И ЛИЧНОСТЬ" textarea.
-  biography: { x: 412, y: 500, w: 175, h: 130 },
-  // "ЯЗЫКИ" textarea.
-  languages: { x: 412, y: 402, w: 175, h: 28 },
-  // "СНАРЯЖЕНИЕ" textarea.
-  equipment: { x: 412, y: 192, w: 175, h: 165 },
-};
-
-// Single-line below the biography textarea — alignment name (form field is fine here).
-const ALIGNMENT_NAME_FIELD = "text_275cexd";
-
-// Page 1 "ЧЕРТЫ" textarea (bottom-right). We draw feats list onto the page.
-const PAGE1_FEATS_BOX = { x: 412, y: 18, w: 175, h: 165 };
-
-/** Wrap text by words, measuring real glyph width with the given font. */
-function wrapByWidth(
-  text: string,
-  font: PDFFont,
-  size: number,
-  maxWidth: number,
-): string[] {
-  const lines: string[] = [];
-  for (const paragraph of text.split(/\n+/)) {
-    const words = paragraph.split(/\s+/).filter(Boolean);
-    let buf = "";
-    for (const w of words) {
-      const candidate = buf ? `${buf} ${w}` : w;
-      const width = font.widthOfTextAtSize(candidate, size);
-      if (width > maxWidth && buf) {
-        lines.push(buf);
-        buf = w;
-      } else {
-        buf = candidate;
-      }
-    }
-    if (buf) lines.push(buf);
-  }
-  return lines;
-}
-
-/** Draw word-wrapped text into a rectangular box on the given page. */
-function drawWrappedText(
-  page: ReturnType<PDFDocument["getPages"]>[number],
-  text: string,
-  box: { x: number; y: number; w: number; h: number },
-  font: PDFFont,
-  size: number,
-  lineHeight = size * 1.25,
-) {
-  if (!text) return;
-  const lines = wrapByWidth(text, font, size, box.w);
-  // Start near the top of the box.
-  let y = box.y + box.h - size;
-  for (const line of lines) {
-    if (y < box.y) break; // ran out of vertical space
-    page.drawText(line, {
-      x: box.x,
-      y,
-      size,
-      font,
-      color: rgb(0.05, 0.05, 0.07),
-    });
-    y -= lineHeight;
-  }
-}
-
-function safeSetText(
-  form: ReturnType<PDFDocument["getForm"]>,
-  fieldName: string,
-  value: string,
-  font: PDFFont,
-) {
-  try {
-    const f = form.getTextField(fieldName);
-    f.setText(value);
-    f.updateAppearances(font);
-  } catch {
-    // field missing or wrong type — ignore (templates change over time)
-  }
-}
+import {
+  ABILITY_FIELDS,
+  ALIGNMENT_NAME_FIELD,
+  FONT_URL,
+  HEADER_STAT_BOXES,
+  PAGE1_FEATS_BOX,
+  PAGE2_BOXES,
+  PROFICIENCY_BONUS_FIELD,
+  type PdfRefs,
+  SKILL_FIELDS,
+  TEMPLATE_URL,
+  TEXTAREA_SIZE,
+  TOP_FIELDS,
+  WEAPON_ROWS,
+  XP_FOR_LEVEL,
+} from "./fields";
+import { drawWrappedText, safeSetText, wrapByWidth } from "./draw";
 
 export async function exportCharacterPdf(
   character: Character,
@@ -234,8 +59,8 @@ export async function exportCharacterPdf(
   const cyrFont = await doc.embedFont(fontBytes, { subset: true });
 
   const form = doc.getForm();
-  // Use the cyrillic font as the form's default appearance font so default
-  // appearance strings drawn by viewers don't break on Russian glyphs.
+  // Make Cyrillic the form's default appearance font so viewers don't break
+  // on Russian glyphs when they re-render appearances themselves.
   try {
     form.updateFieldAppearances(cyrFont);
   } catch {
@@ -259,17 +84,10 @@ export async function exportCharacterPdf(
   const ac = 10 + dexMod;
   const pb = proficiencyBonus(character.level);
 
-  const classLabel = cls
-    ? `${cls.name_ru}${cls.name_ru ? ` · ${character.level} ур.` : ""}`
-    : "";
+  const classLabel = cls ? `${cls.name_ru} · ${character.level} ур.` : "";
   const raceLabel = race?.name_ru ?? "";
   const bgLabel = bg?.name_ru ?? "";
   const subclassLabel = subclass?.name_ru ?? "";
-
-  // Form fields use the PDF template's own font size (any setFontSize call is
-  // ignored by viewers in favour of the field's default appearance). The only
-  // size we actually control is for text we draw directly on the page below.
-  const TEXTAREA_SIZE = 10;
 
   // --- Top header ---
   safeSetText(form, TOP_FIELDS.name, character.name, cyrFont);
@@ -330,13 +148,20 @@ export async function exportCharacterPdf(
   safeSetText(form, HEADER_STAT_BOXES.initiative, formatModifier(dexMod), cyrFont);
   safeSetText(form, HEADER_STAT_BOXES.speed, String(race?.speed ?? ""), cyrFont);
   safeSetText(form, HEADER_STAT_BOXES.size, sizeShort, cyrFont);
-  safeSetText(form, HEADER_STAT_BOXES.passive_perception, String(passivePerception), cyrFont);
+  safeSetText(
+    form,
+    HEADER_STAT_BOXES.passive_perception,
+    String(passivePerception),
+    cyrFont,
+  );
 
   // --- Proficiency bonus tile (top-left) ---
   safeSetText(form, PROFICIENCY_BONUS_FIELD, `+${pb}`, cyrFont);
 
   // --- Weapons table (page 1) ---
-  const weapons = character.items.filter((it) => refs.items[it.code]?.type === "weapon");
+  const weapons = character.items.filter(
+    (it) => refs.items[it.code]?.type === "weapon",
+  );
   weapons.slice(0, WEAPON_ROWS.length).forEach((w, i) => {
     const row = WEAPON_ROWS[i];
     const ref = refs.items[w.code];
@@ -346,7 +171,7 @@ export async function exportCharacterPdf(
     }
   });
 
-  // --- Page 1: feats list (drawn directly to avoid auto-size) ---
+  // --- Page 1: feats list (drawn directly to bypass auto-resize) ---
   const pages = doc.getPages();
   const page1 = pages[0];
   if (character.feats.length > 0) {
@@ -362,9 +187,7 @@ export async function exportCharacterPdf(
     safeSetText(form, ALIGNMENT_NAME_FIELD, alignment.name_ru, cyrFont);
   }
 
-  // --- Page 2: biography/character (alignment description), languages, equipment.
-  //     We draw these directly because multi-line form fields auto-resize and
-  //     produce gigantic glyphs for short content. ---
+  // --- Page 2 textareas drawn directly (form auto-resize would explode glyphs)
   const page2 = pages[1];
   if (page2 && alignment) {
     drawWrappedText(
@@ -375,7 +198,6 @@ export async function exportCharacterPdf(
       TEXTAREA_SIZE,
     );
   }
-
   if (page2) {
     const languageList = character.languages
       .map((c) => LANGUAGE_OPTIONS.find((l) => l.code === c)?.name_ru ?? c)
@@ -388,11 +210,17 @@ export async function exportCharacterPdf(
       return it.qty > 1 ? `${name} × ${it.qty}` : name;
     });
     if (character.gold > 0) equipmentParts.push(`золото ${character.gold} зм`);
-    drawWrappedText(page2, equipmentParts.join("; "), PAGE2_BOXES.equipment, cyrFont, TEXTAREA_SIZE);
+    drawWrappedText(
+      page2,
+      equipmentParts.join("; "),
+      PAGE2_BOXES.equipment,
+      cyrFont,
+      TEXTAREA_SIZE,
+    );
   }
 
-  // --- Append a clean summary page so all data is captured regardless of
-  //     whether the random-field mapping above lands correctly. ---
+  // --- Always-correct fallback: append a clean summary page so all data is
+  //     captured even if a template field rename drifts the mapping above. ---
   await appendSummaryPage(doc, cyrFont, character, refs, {
     cls,
     race,
@@ -426,7 +254,7 @@ async function appendSummaryPage(
   ctx: SummaryCtx,
 ) {
   const page = doc.addPage([595, 842]); // A4 portrait
-  const { height } = page.getSize();
+  const { height, width: pageWidth } = page.getSize();
   const margin = 36;
   let y = height - margin;
 
@@ -435,11 +263,14 @@ async function appendSummaryPage(
 
   const drawText = (
     text: string,
-    opts: { x?: number; size?: number; color?: ReturnType<typeof rgb>; bold?: boolean } = {},
+    opts: {
+      x?: number;
+      size?: number;
+      color?: ReturnType<typeof rgb>;
+    } = {},
   ) => {
-    const x = opts.x ?? margin;
     page.drawText(text, {
-      x,
+      x: opts.x ?? margin,
       y,
       size: opts.size ?? 10,
       font,
@@ -472,7 +303,6 @@ async function appendSummaryPage(
   drawText(subtitleParts.join(" · "), { size: 11, color: subtle });
   advance(20);
 
-  // Personal block.
   drawText("Личное", { size: 12 });
   advance(14);
   const genderName =
@@ -487,7 +317,6 @@ async function appendSummaryPage(
   );
   advance(20);
 
-  // Stats row.
   drawText("Боевые показатели", { size: 12 });
   advance(14);
   drawText(
@@ -497,7 +326,6 @@ async function appendSummaryPage(
   );
   advance(20);
 
-  // Ability scores table.
   drawText("Характеристики", { size: 12 });
   advance(14);
   const colX = [margin, margin + 140, margin + 220, margin + 320];
@@ -520,7 +348,6 @@ async function appendSummaryPage(
   }
   advance(8);
 
-  // Skills.
   drawText("Навыки", { size: 12 });
   advance(14);
   const allSkills = new Set([
@@ -534,7 +361,6 @@ async function appendSummaryPage(
   }
   advance(8);
 
-  // Feats.
   if (character.feats.length > 0) {
     drawText("Черты", { size: 12 });
     advance(14);
@@ -543,21 +369,22 @@ async function appendSummaryPage(
       drawText(`• ${f?.name_ru ?? code}`);
       advance();
       if (f?.description_ru) {
-        const wrapped = wrapText(f.description_ru, 95);
+        const wrapped = wrapByWidth(
+          f.description_ru,
+          font,
+          9,
+          pageWidth - margin * 2 - 12,
+        );
         for (const line of wrapped) {
           drawText(`  ${line}`, { color: subtle, size: 9 });
           advance(11);
         }
       }
-      if (y < margin + 60) {
-        // ran out of room — break gracefully
-        return;
-      }
+      if (y < margin + 60) return;
     }
     advance(8);
   }
 
-  // Equipment + gold.
   drawText("Снаряжение и золото", { size: 12 });
   advance(14);
   drawText(`Золото: ${character.gold} зм`);
@@ -576,23 +403,6 @@ async function appendSummaryPage(
   }
 }
 
-function wrapText(text: string, maxChars: number): string[] {
-  const words = text.split(/\s+/);
-  const lines: string[] = [];
-  let buf = "";
-  for (const w of words) {
-    const candidate = buf ? `${buf} ${w}` : w;
-    if (candidate.length > maxChars) {
-      if (buf) lines.push(buf);
-      buf = w;
-    } else {
-      buf = candidate;
-    }
-  }
-  if (buf) lines.push(buf);
-  return lines;
-}
-
 export function downloadPdf(bytes: Uint8Array, filename: string) {
   const blob = new Blob([bytes], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
@@ -604,4 +414,3 @@ export function downloadPdf(bytes: Uint8Array, filename: string) {
   a.remove();
   URL.revokeObjectURL(url);
 }
-

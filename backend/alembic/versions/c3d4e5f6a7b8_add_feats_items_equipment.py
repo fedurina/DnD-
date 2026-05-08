@@ -4,6 +4,9 @@ Revision ID: c3d4e5f6a7b8
 Revises: b2c3d4e5f6a7
 Create Date: 2026-05-07 14:00:00.000000
 
+Non-destructive: existing characters get feats=[], items=[], gold=0 via
+server_default backfill. The default is then dropped so future inserts must
+supply explicit values (matching the model + Pydantic validators).
 """
 from typing import Sequence, Union
 
@@ -19,9 +22,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Wipe characters: schema is changing significantly (NOT NULL items, gold, feats).
-    op.execute("DELETE FROM characters")
-
     # ---- new ref tables ----
     op.create_table(
         "ref_feats",

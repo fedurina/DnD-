@@ -67,11 +67,11 @@ async def test_create_accepts_1_1_1_distribution(client, player):
 
 
 async def test_create_rejects_missing_origin_feat(client, player):
-    # sage's origin feat is "magic_initiate_wizard"; submitting feats=[] must fail
+    # sage's origin feat is "magic_initiate_wizard" — error message uses Russian name.
     payload = valid_character_payload(feats=[])
     r = await client.post("/api/v1/characters", json=payload, headers=player["headers"])
     assert r.status_code == 400
-    assert "magic_initiate_wizard" in r.json()["detail"]
+    assert "Магический инициат" in r.json()["detail"]
 
 
 async def test_create_rejects_unknown_feat_code(client, player):
@@ -117,7 +117,8 @@ async def test_update_revalidates_feats_on_bg_change(client, player):
         headers=player["headers"],
     )
     assert r.status_code == 400, r.text
-    assert "alert" in r.json()["detail"]
+    # criminal's origin feat is "alert" → "Бдительный" in Russian
+    assert "Бдительный" in r.json()["detail"]
 
 
 async def test_update_bg_change_with_matching_feats_succeeds(client, player):

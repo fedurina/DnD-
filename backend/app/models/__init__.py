@@ -4,8 +4,11 @@ from app.models.reference import (
     Ability,
     Background,
     CharacterClass,
+    Feat,
+    Item,
     Race,
     Skill,
+    Subclass,
 )
 from app.models.refresh_token import RefreshToken
 from app.models.user import User, UserRole
@@ -17,7 +20,10 @@ __all__ = [
     "Skill",
     "Race",
     "CharacterClass",
+    "Subclass",
     "Background",
+    "Feat",
+    "Item",
     "Character",
     "Campaign",
     "CampaignMember",

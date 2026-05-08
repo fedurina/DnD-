@@ -59,8 +59,10 @@ def _validate_skills(
 
 async def _validate_feats(db: AsyncSession, feat_codes: list[str], bg: Background) -> None:
     if bg.feat_code and bg.feat_code not in feat_codes:
+        bg_feat = await db.get(Feat, bg.feat_code)
+        feat_label = bg_feat.name_ru if bg_feat else bg.feat_code
         raise CharacterValidationError(
-            f"Черта предыстории «{bg.feat_code}» должна быть в списке"
+            f"Черта предыстории «{feat_label}» должна быть в списке"
         )
     if len(set(feat_codes)) != len(feat_codes):
         raise CharacterValidationError("Черта не может повторяться")

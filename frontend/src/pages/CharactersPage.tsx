@@ -72,10 +72,19 @@ export default function CharactersPage() {
           <h1>Персонажи</h1>
           <p>Создавайте героев и управляйте ими.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => navigate("/characters/new")}>
-          <PlusIcon size={16} />
-          Создать персонажа
-        </button>
+        <div className="row">
+          <button
+            className="btn btn-secondary"
+            onClick={() => navigate("/characters/random")}
+            title="Полностью случайный персонаж"
+          >
+            🎲 Случайный
+          </button>
+          <button className="btn btn-primary" onClick={() => navigate("/characters/new")}>
+            <PlusIcon size={16} />
+            Создать персонажа
+          </button>
+        </div>
       </header>
 
       <div className="tabs" style={{ marginBottom: 20 }}>
@@ -106,7 +115,13 @@ export default function CharactersPage() {
               : "Запустите визард — он проведёт через все шаги создания по правилам D&D 5.5e."}
           </div>
           {filter !== "archived" && (
-            <div style={{ marginTop: 16 }}>
+            <div className="row" style={{ marginTop: 16 }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => navigate("/characters/random")}
+              >
+                🎲 Случайный
+              </button>
               <button className="btn btn-primary" onClick={() => navigate("/characters/new")}>
                 <PlusIcon size={16} />
                 Создать персонажа

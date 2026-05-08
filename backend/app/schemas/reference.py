@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class _Base(BaseModel):
@@ -32,8 +32,11 @@ class RaceOut(_Base):
 
 
 class InventoryEntry(BaseModel):
+    """Shared inventory line used in character payloads, character responses,
+    and reference responses (class/background starting equipment)."""
+
     code: str
-    qty: int
+    qty: int = Field(ge=1)
 
 
 class ClassOut(_Base):
