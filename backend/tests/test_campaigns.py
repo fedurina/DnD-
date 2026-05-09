@@ -332,3 +332,53 @@ async def test_lists_separate_owned_and_joined(client, master, player):
     alice = (await client.get("/api/v1/campaigns", headers=player["headers"])).json()
     assert len(alice["owned"]) == 0
     assert len(alice["joined"]) == 1
+
+
+# --------------------------------------------------- личные заметки мастера
+
+
+async def test_master_can_set_and_read_notes(client, master):
+    campaign = await _make_campaign(client, master["headers"])
+    r = await client.patch(
+        f"/api/v1/campaigns/{campaign['id']}",
+        json={"master_notes": "Тайна: владелец таверны на самом деле демон."},
+        headers=master["headers"],
+    )
+    assert r.status_code == 200
+    detail = (
+        await client.get(f"/api/v1/campaigns/{campaign['id']}", headers=master["headers"])
+    ).json()
+    assert "демон" in detail["master_notes"]
+
+
+async def test_player_does_not_see_master_notes(client, master, player):
+    campaign = await _make_campaign(client, master["headers"])
+    await client.patch(
+        f"/api/v1/campaigns/{campaign['id']}",
+        json={"master_notes": "Секретный план мастера"},
+        headers=master["headers"],
+    )
+    await client.post(
+        "/api/v1/campaigns/join",
+        json={"invite_code": campaign["invite_code"]},
+        headers=player["headers"],
+    )
+    detail = (
+        await client.get(f"/api/v1/campaigns/{campaign['id']}", headers=player["headers"])
+    ).json()
+    assert detail["master_notes"] == ""
+
+
+async def test_player_cannot_update_master_notes(client, master, player):
+    campaign = await _make_campaign(client, master["headers"])
+    await client.post(
+        "/api/v1/campaigns/join",
+        json={"invite_code": campaign["invite_code"]},
+        headers=player["headers"],
+    )
+    r = await client.patch(
+        f"/api/v1/campaigns/{campaign['id']}",
+        json={"master_notes": "вмешательство игрока"},
+        headers=player["headers"],
+    )
+    assert r.status_code == 403

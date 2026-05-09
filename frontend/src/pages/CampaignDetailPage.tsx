@@ -182,6 +182,14 @@ export default function CampaignDetailPage() {
           </section>
         )}
 
+        {isMaster && (
+          <MasterNotesSection
+            campaignId={campaign.id}
+            initialNotes={campaign.master_notes}
+            onSaved={(c) => setCampaign(c)}
+          />
+        )}
+
         {!isMaster && myMembership && (
           <CharacterAttachSection
             campaign={campaign}
@@ -360,6 +368,92 @@ function CharacterAttachSection({
           >
             Создать нового
           </Link>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function MasterNotesSection({
+  campaignId,
+  initialNotes,
+  onSaved,
+}: {
+  campaignId: string;
+  initialNotes: string;
+  onSaved: (c: Campaign) => void;
+}) {
+  const [text, setText] = useState(initialNotes);
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Если стейт кампании обновился извне (например, refresh после kick),
+  // подтягиваем заметки заново.
+  useEffect(() => {
+    setText(initialNotes);
+  }, [initialNotes]);
+
+  const dirty = text !== initialNotes;
+
+  const onSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await campaignsApi.update(campaignId, { master_notes: text });
+      onSaved(updated);
+      setSavedAt(Date.now());
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Не удалось сохранить");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="card">
+      <header style={{ marginBottom: 12 }}>
+        <h2 className="card-title">Личные заметки мастера</h2>
+        <p className="card-subtitle">
+          Видны только вам. Тайны мира, секреты NPC, планы на сюжет — игроки
+          этого поля не получают.
+        </p>
+      </header>
+      <textarea
+        className="input"
+        placeholder="Например: владелец таверны на самом деле демон в личине; артефакт у графа — фальшивка; следующая сессия начнётся с ловушки в подвале…"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        disabled={saving}
+        rows={8}
+        style={{ width: "100%", resize: "vertical", fontFamily: "inherit" }}
+      />
+      <div
+        className="row"
+        style={{ gap: 12, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}
+      >
+        <button
+          className="btn btn-primary"
+          onClick={onSave}
+          disabled={saving || !dirty}
+          type="button"
+        >
+          {saving ? "Сохраняем…" : "Сохранить"}
+        </button>
+        {!dirty && savedAt && (
+          <span className="muted" style={{ fontSize: 13 }}>
+            Сохранено
+          </span>
+        )}
+        {dirty && (
+          <span className="muted" style={{ fontSize: 13 }}>
+            Несохранённые изменения
+          </span>
+        )}
+      </div>
+      {error && (
+        <div className="alert alert-error" style={{ marginTop: 10 }}>
+          {error}
         </div>
       )}
     </section>

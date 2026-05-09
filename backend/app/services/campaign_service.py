@@ -78,6 +78,7 @@ async def create_campaign(
         allowed_classes=payload.allowed_classes,
         max_level=payload.max_level,
         is_active=True,
+        master_notes=payload.master_notes,
     )
     db.add(campaign)
     await db.commit()
@@ -94,7 +95,7 @@ async def update_campaign(
     if campaign.master_id != user.id:
         raise CampaignPermissionError()
 
-    for field in ("name", "description", "allowed_races", "allowed_classes", "max_level", "is_active"):
+    for field in ("name", "description", "allowed_races", "allowed_classes", "max_level", "is_active", "master_notes"):
         value = getattr(payload, field)
         if value is not None:
             setattr(campaign, field, value)
@@ -264,6 +265,7 @@ async def get_detail(
         "allowed_classes": campaign.allowed_classes,
         "max_level": campaign.max_level,
         "is_active": campaign.is_active,
+        "master_notes": campaign.master_notes if is_master else "",
         "members": members,
         "created_at": campaign.created_at,
         "updated_at": campaign.updated_at,

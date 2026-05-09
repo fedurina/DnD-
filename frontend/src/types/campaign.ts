@@ -36,6 +36,7 @@ export interface Campaign {
   allowed_classes: string[];
   max_level: number;
   is_active: boolean;
+  master_notes: string; // пустая строка для всех, кроме мастера
   members: CampaignMember[];
   created_at: string;
   updated_at: string;
@@ -47,6 +48,7 @@ export interface CampaignCreatePayload {
   allowed_races?: string[];
   allowed_classes?: string[];
   max_level?: number;
+  master_notes?: string;
 }
 
 export interface CampaignUpdatePayload {
@@ -56,4 +58,5 @@ export interface CampaignUpdatePayload {
   allowed_classes?: string[];
   max_level?: number;
   is_active?: boolean;
+  master_notes?: string;
 }

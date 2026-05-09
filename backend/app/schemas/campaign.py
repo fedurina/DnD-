@@ -11,6 +11,7 @@ class CampaignCreate(BaseModel):
     allowed_races: list[str] = []
     allowed_classes: list[str] = []
     max_level: Annotated[int, Field(ge=1, le=20)] = 20
+    master_notes: str = ""
 
     @field_validator("allowed_races", "allowed_classes")
     @classmethod
@@ -27,6 +28,7 @@ class CampaignUpdate(BaseModel):
     allowed_classes: list[str] | None = None
     max_level: Annotated[int, Field(ge=1, le=20)] | None = None
     is_active: bool | None = None
+    master_notes: str | None = None
 
 
 class CampaignOut(BaseModel):
@@ -41,6 +43,8 @@ class CampaignOut(BaseModel):
     allowed_classes: list[str]
     max_level: int
     is_active: bool
+    # Только для мастера. Игрокам сервис возвращает пустую строку.
+    master_notes: str = ""
     created_at: datetime
     updated_at: datetime
 
