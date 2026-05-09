@@ -1,9 +1,13 @@
+import asyncio
+import json
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.deps import get_current_user
+from app.core.events import bus
 from app.db.session import get_db
 from app.models.character import Character
 from app.models.user import User
@@ -17,6 +21,15 @@ from app.services import character_service
 from app.services.character_service import CharacterValidationError
 
 router = APIRouter(prefix="/characters", tags=["characters"])
+
+
+def _topic(character_id: uuid.UUID) -> str:
+    return f"character:{character_id}"
+
+
+async def _publish_character_updated(char: Character) -> None:
+    payload = CharacterOut.model_validate(char).model_dump(mode="json")
+    await bus.publish(_topic(char.id), payload)
 
 
 async def _attach_campaigns(db: AsyncSession, characters: list[Character]) -> None:
@@ -85,6 +98,7 @@ async def update_character(
     if char is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Персонаж не найден")
     await _attach_campaigns(db, [char])
+    await _publish_character_updated(char)
     return char
 
 
@@ -100,6 +114,7 @@ async def archive_character(
     if char is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Персонаж не найден")
     await _attach_campaigns(db, [char])
+    await _publish_character_updated(char)
     return char
 
 
@@ -115,6 +130,7 @@ async def unarchive_character(
     if char is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Персонаж не найден")
     await _attach_campaigns(db, [char])
+    await _publish_character_updated(char)
     return char
 
 
@@ -127,3 +143,46 @@ async def delete_character(
     ok = await character_service.delete_character(db, current_user, character_id)
     if not ok:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Персонаж не найден")
+
+
+@router.get("/{character_id}/events")
+async def character_events(
+    character_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """SSE-стрим обновлений персонажа. Тот, кто видит лист (владелец или мастер
+    кампании, к которой персонаж прикреплён), будет получать события `character.updated`
+    с актуальным state'ом сразу после PATCH/archive/unarchive из любой сессии.
+    """
+    char = await character_service.get_character(db, current_user, character_id)
+    if char is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Персонаж не найден")
+
+    async def gen():
+        async with bus.subscribe(_topic(character_id)) as queue:
+            yield b": connected\n\n"
+            try:
+                while True:
+                    try:
+                        payload = await asyncio.wait_for(queue.get(), timeout=15.0)
+                        msg = (
+                            f"event: character.updated\n"
+                            f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+                        )
+                        yield msg.encode("utf-8")
+                    except asyncio.TimeoutError:
+                        # Heartbeat: SSE-комментарий, чтобы соединение не закрылось
+                        # из-за прокси/idle timeout.
+                        yield b": ping\n\n"
+            except asyncio.CancelledError:
+                return
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+        },
+    )

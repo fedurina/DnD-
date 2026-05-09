@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { charactersApi } from "@/api/characters";
+import { streamCharacter } from "@/api/charactersStream";
 import {
   ABILITY_NAMES_RU,
   ABILITY_ORDER,
@@ -82,6 +83,29 @@ export default function CharacterDetailPage() {
       .get(id)
       .then(setCharacter)
       .catch((e) => setError(e instanceof ApiError ? e.message : "Ошибка загрузки"));
+  }, [id]);
+
+  // Реалтайм: подписываемся на SSE-события персонажа, обновляем state в момент
+  // получения. Эффект перезапускается только при смене id, не при каждом
+  // setCharacter (стрим один на жизнь страницы).
+  useEffect(() => {
+    if (!id) return;
+    const ctrl = new AbortController();
+    streamCharacter(
+      id,
+      (e) => {
+        if (e.event === "character.updated" && e.data && typeof e.data === "object") {
+          setCharacter(e.data as Character);
+        }
+      },
+      ctrl.signal,
+    ).catch((err) => {
+      if (err?.name !== "AbortError") {
+        // Молча — стрим вспомогательный, без него страница работает.
+        console.warn("character stream:", err);
+      }
+    });
+    return () => ctrl.abort();
   }, [id]);
 
   const onArchiveToggle = async () => {
