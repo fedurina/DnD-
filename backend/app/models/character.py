@@ -59,6 +59,13 @@ class Character(Base):
     equip_class_choice: Mapped[str] = mapped_column(String(8), nullable=False, default="set")
     equip_bg_choice: Mapped[str] = mapped_column(String(8), nullable=False, default="set")
 
+    # Текущие хиты. NULL означает «полный запас» — максимум вычисляется по
+    # классу/уровню/Телосложению на стороне клиента. После первого получения
+    # урона/лечения значение становится явным.
+    current_hp: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    # Временные хиты — буфер поверх текущих, при уроне расходуются первыми.
+    temp_hp: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
     is_archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     created_at: Mapped[datetime] = mapped_column(

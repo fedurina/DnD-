@@ -37,6 +37,8 @@ export interface CharacterCreatePayload {
   gold: number;
   equip_class_choice: EquipChoice;
   equip_bg_choice: EquipChoice;
+  current_hp?: number | null;
+  temp_hp?: number;
 }
 
 export interface CharacterCampaignBrief {
@@ -48,6 +50,8 @@ export interface CharacterCampaignBrief {
 export interface Character extends CharacterCreatePayload {
   id: string;
   user_id: string;
+  current_hp: number | null;
+  temp_hp: number;
   is_archived: boolean;
   campaigns: CharacterCampaignBrief[];
   created_at: string;
@@ -86,4 +90,6 @@ export interface CharacterUpdatePayload {
   gold?: number;
   equip_class_choice?: EquipChoice;
   equip_bg_choice?: EquipChoice;
+  current_hp?: number | null;
+  temp_hp?: number;
 }

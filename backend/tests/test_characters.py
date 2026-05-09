@@ -678,3 +678,83 @@ async def test_subclasses_endpoint_filters_by_class(client, player):
     codes = [s["code"] for s in r.json()]
     assert "evocation" in codes
     assert "champion" not in codes
+
+
+# --------------------------------------------------- трекер хитов
+
+
+async def test_create_starts_with_full_hp_and_no_temp(client, player):
+    """По умолчанию current_hp = NULL (= «при полном здоровье»), temp_hp = 0."""
+    r = await client.post(
+        "/api/v1/characters", json=valid_character_payload(), headers=player["headers"]
+    )
+    assert r.status_code == 201, r.text
+    data = r.json()
+    assert data["current_hp"] is None
+    assert data["temp_hp"] == 0
+
+
+async def test_update_sets_current_and_temp_hp(client, player):
+    create = await client.post(
+        "/api/v1/characters", json=valid_character_payload(), headers=player["headers"]
+    )
+    cid = create.json()["id"]
+    r = await client.patch(
+        f"/api/v1/characters/{cid}",
+        json={"current_hp": 4, "temp_hp": 5},
+        headers=player["headers"],
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["current_hp"] == 4
+    assert r.json()["temp_hp"] == 5
+
+
+async def test_update_rejects_negative_hp(client, player):
+    create = await client.post(
+        "/api/v1/characters", json=valid_character_payload(), headers=player["headers"]
+    )
+    cid = create.json()["id"]
+    r = await client.patch(
+        f"/api/v1/characters/{cid}", json={"current_hp": -1}, headers=player["headers"]
+    )
+    assert r.status_code == 422
+
+
+async def test_level_up_does_not_clamp_current_hp(client, player):
+    """При level-up максимум растёт; current_hp остаётся как был, не клампится вниз."""
+    create = await client.post(
+        "/api/v1/characters", json=valid_character_payload(), headers=player["headers"]
+    )
+    cid = create.json()["id"]
+    # Wizard d6 + CON 13 (mod +1) на 1 уровне → max = 6 + 1 = 7. Раним до 3.
+    await client.patch(
+        f"/api/v1/characters/{cid}", json={"current_hp": 3}, headers=player["headers"]
+    )
+    # Поднимаем до 3 уровня: max растёт, current_hp=3 валиден и сохраняется.
+    r = await client.patch(
+        f"/api/v1/characters/{cid}",
+        json={"level": 3, "subclass_code": "evocation"},
+        headers=player["headers"],
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["current_hp"] == 3
+
+
+async def test_level_down_clamps_current_hp_to_new_max(client, player):
+    """При снижении уровня current_hp клампится к новому (меньшему) максимуму."""
+    create = await client.post(
+        "/api/v1/characters",
+        json=valid_character_payload(level=3, subclass_code="evocation"),
+        headers=player["headers"],
+    )
+    cid = create.json()["id"]
+    # Wizard на 3 уровне с CON 13 (+1): max = 6 + 1 + 2*(4 + 1) = 17. Лечимся до 17.
+    await client.patch(
+        f"/api/v1/characters/{cid}", json={"current_hp": 17}, headers=player["headers"]
+    )
+    # Снижаемся до 1 уровня: max = 7, current_hp должен прижаться к 7.
+    r = await client.patch(
+        f"/api/v1/characters/{cid}", json={"level": 1}, headers=player["headers"]
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["current_hp"] == 7

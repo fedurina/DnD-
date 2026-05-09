@@ -209,7 +209,7 @@ export default function CharacterDetailPage() {
         </section>
       )}
 
-      <CharacterSheet character={character} refs={refs} />
+      <CharacterSheet character={character} refs={refs} onUpdate={setCharacter} />
     </>
   );
 }
@@ -219,9 +219,11 @@ export default function CharacterDetailPage() {
 function CharacterSheet({
   character,
   refs,
+  onUpdate,
 }: {
   character: Character;
   refs: RefsBundle;
+  onUpdate: (c: Character) => void;
 }) {
   const cls = refs.classes[character.class_code];
   const race = refs.races[character.race_code];
@@ -262,8 +264,9 @@ function CharacterSheet({
 
   return (
     <div className="stack">
+      <HpTracker character={character} maxHp={hp} onUpdate={onUpdate} />
+
       <section className="stat-row">
-        <StatCell label="Хиты" value={String(hp)} hint={`d${cls?.hit_die ?? "?"} + ${formatModifier(conMod)} ТЕЛ`} />
         <StatCell label="КЗ" value={String(ac)} hint={`без брони, 10 + ${formatModifier(dexMod)} ЛОВ`} />
         <StatCell label="Инициатива" value={formatModifier(initiative)} hint="ЛОВ модификатор" />
         <StatCell label="Скорость" value={`${race?.speed ?? 0} фт`} hint={race?.size === "small" ? "Маленький" : "Средний"} />
@@ -280,45 +283,17 @@ function CharacterSheet({
         <section className="card card-compact">
           <header style={{ marginBottom: 8 }}>
             <h3 className="card-title">Характеристики и спасброски</h3>
-            <p className="card-subtitle">Точка слева — владение спасброском.</p>
+            <p className="card-subtitle">
+              Точка слева — владение спасброском. Поле «d20» — введи, что выпало
+              на кубике, итоги проверки и спасброска посчитаются сами.
+            </p>
           </header>
-          <table className="sheet-table">
-            <thead>
-              <tr>
-                <th>Характеристика</th>
-                <th className="num">Знач.</th>
-                <th className="num">Мод.</th>
-                <th className="num">Спасбросок</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ABILITY_ORDER.map((a) => {
-                const score = finalScores[a];
-                const mod = abilityModifier(score);
-                const isProf = proficientSaves.has(a);
-                const save = mod + (isProf ? profBonus : 0);
-                const bonus = character.background_bonuses[a as AbilityCode];
-                return (
-                  <tr key={a}>
-                    <td>
-                      {ABILITY_NAMES_RU[a].full}
-                      {bonus ? (
-                        <span className="muted" style={{ marginLeft: 6, fontSize: 12 }}>
-                          (+{bonus})
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="num"><b>{score}</b></td>
-                    <td className="num muted">{formatModifier(mod)}</td>
-                    <td className="num">
-                      <span className={`prof-dot${isProf ? "" : " prof-dot-empty"}`} />
-                      <b>{formatModifier(save)}</b>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <AbilitiesTable
+            finalScores={finalScores}
+            proficientSaves={proficientSaves}
+            profBonus={profBonus}
+            backgroundBonuses={character.background_bonuses}
+          />
         </section>
 
         <section className="card card-compact">
@@ -495,6 +470,286 @@ function StatCell({ label, value, hint }: { label: string; value: string; hint: 
       <div className="stat-cell-value">{value}</div>
       <div className="stat-cell-hint">{hint}</div>
     </div>
+  );
+}
+
+function AbilitiesTable({
+  finalScores,
+  proficientSaves,
+  profBonus,
+  backgroundBonuses,
+}: {
+  finalScores: AbilityScores;
+  proficientSaves: Set<string>;
+  profBonus: number;
+  backgroundBonuses: Partial<Record<AbilityCode, number>>;
+}) {
+  const [rolls, setRolls] = useState<Partial<Record<AbilityCode, string>>>({});
+
+  const setRoll = (a: AbilityCode, value: string) => {
+    setRolls((prev) => ({ ...prev, [a]: value }));
+  };
+
+  return (
+    <table className="sheet-table">
+      <thead>
+        <tr>
+          <th>Хар-ка</th>
+          <th className="num">Знач.</th>
+          <th className="num">Мод.</th>
+          <th className="num">Спас.</th>
+          <th className="num">d20</th>
+          <th>Итог</th>
+        </tr>
+      </thead>
+      <tbody>
+        {ABILITY_ORDER.map((a) => {
+          const score = finalScores[a];
+          const mod = abilityModifier(score);
+          const isProf = proficientSaves.has(a);
+          const save = mod + (isProf ? profBonus : 0);
+          const bonus = backgroundBonuses[a as AbilityCode];
+          const raw = rolls[a] ?? "";
+          const d20 = parseInt(raw, 10);
+          const valid = Number.isFinite(d20) && d20 >= 1 && d20 <= 20;
+          const isCrit = valid && d20 === 20;
+          const isFumble = valid && d20 === 1;
+          return (
+            <tr key={a}>
+              <td>
+                {ABILITY_NAMES_RU[a].full}
+                {bonus ? (
+                  <span className="muted" style={{ marginLeft: 6, fontSize: 12 }}>
+                    (+{bonus})
+                  </span>
+                ) : null}
+              </td>
+              <td className="num"><b>{score}</b></td>
+              <td className="num muted">{formatModifier(mod)}</td>
+              <td className="num">
+                <span className={`prof-dot${isProf ? "" : " prof-dot-empty"}`} />
+                <b>{formatModifier(save)}</b>
+              </td>
+              <td className="num">
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  inputMode="numeric"
+                  className="input"
+                  placeholder="—"
+                  value={raw}
+                  onChange={(e) => setRoll(a, e.target.value)}
+                  style={{ width: 56, textAlign: "center", padding: "4px 6px" }}
+                />
+              </td>
+              <td style={{ fontSize: 12.5 }}>
+                {valid ? (
+                  <span
+                    style={{
+                      color: isCrit
+                        ? "var(--success)"
+                        : isFumble
+                          ? "var(--danger)"
+                          : "var(--text)",
+                      fontWeight: isCrit || isFumble ? 700 : 500,
+                    }}
+                  >
+                    проверка <b>{d20 + mod}</b>
+                    <span className="muted"> · спас </span>
+                    <b>{d20 + save}</b>
+                    {isCrit && (
+                      <span className="muted" style={{ marginLeft: 4 }}>(крит)</span>
+                    )}
+                    {isFumble && (
+                      <span className="muted" style={{ marginLeft: 4 }}>(провал)</span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="muted">—</span>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function HpTracker({
+  character,
+  maxHp,
+  onUpdate,
+}: {
+  character: Character;
+  maxHp: number;
+  onUpdate: (c: Character) => void;
+}) {
+  const [amount, setAmount] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const current = character.current_hp ?? maxHp;
+  const temp = character.temp_hp ?? 0;
+  const ratio = maxHp > 0 ? Math.max(0, Math.min(1, current / maxHp)) : 0;
+  const barColor =
+    ratio > 0.5 ? "var(--success)" : ratio > 0.25 ? "#a16207" : "var(--danger)";
+
+  const apply = async (
+    changes: { current_hp?: number | null; temp_hp?: number },
+  ) => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const updated = await charactersApi.update(character.id, changes);
+      onUpdate(updated);
+      setAmount("");
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Не удалось обновить хиты");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const parseAmount = (): number => {
+    const n = parseInt(amount, 10);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+
+  const damage = () => {
+    const n = parseAmount();
+    if (n === 0) return;
+    let newTemp = temp;
+    let newCurrent = current;
+    if (n <= temp) {
+      newTemp = temp - n;
+    } else {
+      newCurrent = Math.max(0, current - (n - temp));
+      newTemp = 0;
+    }
+    apply({ current_hp: newCurrent, temp_hp: newTemp });
+  };
+
+  const heal = () => {
+    const n = parseAmount();
+    if (n === 0) return;
+    apply({ current_hp: Math.min(maxHp, current + n) });
+  };
+
+  const setTempHp = () => {
+    const n = parseAmount();
+    apply({ temp_hp: n });
+  };
+
+  const restoreFull = () => apply({ current_hp: maxHp, temp_hp: 0 });
+
+  return (
+    <section className="card card-compact">
+      <header style={{ marginBottom: 10 }}>
+        <h3 className="card-title">Хиты</h3>
+        <p className="card-subtitle">
+          Урон сначала снимается с временных хитов, потом — с текущих.
+        </p>
+      </header>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          gap: 10,
+          marginBottom: 6,
+        }}
+      >
+        <span style={{ fontSize: 32, fontWeight: 700, lineHeight: 1 }}>
+          {current}
+        </span>
+        <span className="muted" style={{ fontSize: 18 }}>
+          / {maxHp}
+        </span>
+        {temp > 0 && (
+          <span
+            className="badge"
+            title="Временные хиты — буфер поверх текущих"
+            style={{ marginLeft: 6 }}
+          >
+            +{temp} врем.
+          </span>
+        )}
+      </div>
+
+      <div
+        style={{
+          height: 8,
+          borderRadius: 999,
+          background: "var(--surface-3)",
+          overflow: "hidden",
+          marginBottom: 12,
+        }}
+      >
+        <div
+          style={{
+            width: `${ratio * 100}%`,
+            height: "100%",
+            background: barColor,
+            transition: "width 200ms ease",
+          }}
+        />
+      </div>
+
+      <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+        <input
+          type="number"
+          min={0}
+          inputMode="numeric"
+          className="input"
+          placeholder="Сколько"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          disabled={submitting}
+          style={{ width: 100 }}
+        />
+        <button
+          className="btn btn-secondary"
+          onClick={damage}
+          disabled={submitting || parseAmount() === 0}
+          type="button"
+        >
+          Урон
+        </button>
+        <button
+          className="btn btn-secondary"
+          onClick={heal}
+          disabled={submitting || parseAmount() === 0}
+          type="button"
+        >
+          Лечение
+        </button>
+        <button
+          className="btn btn-ghost"
+          onClick={setTempHp}
+          disabled={submitting}
+          type="button"
+          title="Заменить временные хиты на введённое число (или 0, чтобы снять)"
+        >
+          Временные
+        </button>
+        <button
+          className="btn btn-ghost"
+          onClick={restoreFull}
+          disabled={submitting || (current === maxHp && temp === 0)}
+          type="button"
+        >
+          Восстановить
+        </button>
+      </div>
+
+      {error && (
+        <div className="alert alert-error" style={{ marginTop: 10 }}>
+          {error}
+        </div>
+      )}
+    </section>
   );
 }
 

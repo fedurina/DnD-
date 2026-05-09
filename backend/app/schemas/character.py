@@ -69,6 +69,8 @@ class CharacterCreate(BaseModel):
     gold: Annotated[int, Field(ge=0)] = 0
     equip_class_choice: str = "set"
     equip_bg_choice: str = "set"
+    current_hp: Annotated[int, Field(ge=0)] | None = None
+    temp_hp: Annotated[int, Field(ge=0)] = 0
 
     @field_validator("equip_class_choice", "equip_bg_choice")
     @classmethod
@@ -158,6 +160,8 @@ class CharacterOut(BaseModel):
     gold: int
     equip_class_choice: str
     equip_bg_choice: str
+    current_hp: int | None
+    temp_hp: int
     is_archived: bool
     campaigns: list[CharacterCampaignBrief] = []
 
@@ -201,6 +205,8 @@ class CharacterUpdate(BaseModel):
     gold: Annotated[int, Field(ge=0)] | None = None
     equip_class_choice: str | None = None
     equip_bg_choice: str | None = None
+    current_hp: Annotated[int, Field(ge=0)] | None = None
+    temp_hp: Annotated[int, Field(ge=0)] | None = None
 
     @field_validator("equip_class_choice", "equip_bg_choice")
     @classmethod

@@ -21,6 +21,24 @@ class CharacterValidationError(ValueError):
     """Бросается, когда payload структурно валиден, но не соответствует доменным правилам."""
 
 
+def _ability_modifier(score: int) -> int:
+    return (score - 10) // 2
+
+
+def _max_hp(hit_die: int, con_score: int, level: int) -> int:
+    """Та же формула, что в frontend/src/lib/dnd.ts: максимум на 1 уровне +
+    среднее (hit_die/2 + 1) за каждый последующий + модификатор Телосложения
+    за каждый уровень."""
+    con_mod = _ability_modifier(con_score)
+    avg_per_level = hit_die // 2 + 1
+    lvl = max(1, min(level, 20))
+    return hit_die + con_mod + (lvl - 1) * (avg_per_level + con_mod)
+
+
+def _final_con_score(ability_scores: dict, bonuses: dict) -> int:
+    return int(ability_scores.get("con", 10)) + int(bonuses.get("con", 0))
+
+
 async def _load_refs(
     db: AsyncSession, payload: CharacterCreate
 ) -> tuple[Race, CharacterClass, Background]:
@@ -168,6 +186,8 @@ async def create_character(
         gold=payload.gold,
         equip_class_choice=payload.equip_class_choice,
         equip_bg_choice=payload.equip_bg_choice,
+        current_hp=payload.current_hp,
+        temp_hp=payload.temp_hp,
     )
     db.add(char)
     await db.commit()
@@ -399,6 +419,20 @@ async def update_character(
     char.ability_scores = dict(new_abilities)
     char.background_bonuses = dict(new_bonuses)
     char.chosen_skills = list(new_skills)
+
+    # Хиты: явные значения из payload применяем, затем клампим current_hp
+    # к новому максимуму, если уровень/класс/Телосложение изменились.
+    if payload.current_hp is not None:
+        char.current_hp = payload.current_hp
+    if payload.temp_hp is not None:
+        char.temp_hp = payload.temp_hp
+    new_max = _max_hp(
+        cls.hit_die,
+        _final_con_score(char.ability_scores, char.background_bonuses),
+        char.level,
+    )
+    if char.current_hp is not None and char.current_hp > new_max:
+        char.current_hp = new_max
 
     await db.commit()
     await db.refresh(char)
