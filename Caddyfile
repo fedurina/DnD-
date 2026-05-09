@@ -1,0 +1,23 @@
+{$DOMAIN} {
+    encode gzip zstd
+
+    # /api/* и /docs идут на бэкенд; всё остальное — статика фронтенда
+    @backend {
+        path /api/* /docs /redoc /openapi.json
+    }
+    handle @backend {
+        reverse_proxy backend:8000
+    }
+
+    handle {
+        reverse_proxy frontend:80
+    }
+
+    # Базовые security-заголовки
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+}
