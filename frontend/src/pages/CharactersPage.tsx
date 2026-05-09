@@ -115,7 +115,7 @@ export default function CharactersPage() {
               : "Запустите визард — он проведёт через все шаги создания по правилам D&D 5.5e."}
           </div>
           {filter !== "archived" && (
-            <div className="row" style={{ marginTop: 16 }}>
+            <div className="empty-actions" style={{ marginTop: 16 }}>
               <button
                 className="btn btn-secondary"
                 onClick={() => navigate("/characters/random")}

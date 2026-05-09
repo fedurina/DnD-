@@ -63,8 +63,12 @@ export default function RegisterPage() {
             minLength={3}
             maxLength={64}
             pattern="[a-zA-Z0-9_-]+"
+            title="Только латинские буквы, цифры, дефис и подчёркивание (3–64 символа)"
             autoComplete="username"
           />
+          <p className="muted" style={{ fontSize: 12.5, marginTop: 6 }}>
+            Только латинские буквы, цифры, дефис и подчёркивание.
+          </p>
         </div>
 
         <div className="field">

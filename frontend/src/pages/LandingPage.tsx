@@ -125,7 +125,7 @@ export default function LandingPage() {
           <Feature
             icon={<BookIcon size={20} />}
             title="Справочник"
-            hint="Расы, классы и предыстории на русском — для быстрой подсказки во время игры."
+            hint="Расы, классы и предыстории — для быстрой подсказки во время игры."
           />
         </section>
       </div>
